@@ -986,39 +986,39 @@
       };
 
       if (type === 'cornell') {
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: m, w: safeW, h: safeH * 0.1, label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: m + safeH * 0.1 + 15, w: safeW * 0.3 - 5, h: safeH * 0.7 - 30, label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW * 0.3 + 5, y: m + safeH * 0.1 + 15, w: safeW * 0.7 - 5, h: safeH * 0.7 - 30, label: '', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: m + safeH * 0.8, w: safeW, h: safeH * 0.2, label: '', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: m, y: m, w: safeW, h: safeH * 0.1, label: 'Topic / Objective:', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: m, y: m + safeH * 0.1 + 15, w: safeW * 0.3 - 5, h: safeH * 0.7 - 30, label: 'Questions / Cues:', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: m + safeW * 0.3 + 5, y: m + safeH * 0.1 + 15, w: safeW * 0.7 - 5, h: safeH * 0.7 - 30, label: 'Notes:', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: m, y: m + safeH * 0.8, w: safeW, h: safeH * 0.2, label: 'Summary:', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
       
       } else if (type === 'frayer') {
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: m, w: safeW/2, h: safeH/2, label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: m, w: safeW/2, h: safeH/2, label: '', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: m + safeH/2, w: safeW/2, h: safeH/2, label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: m + safeH/2, w: safeW/2, h: safeH/2, label: '', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: m, y: m, w: safeW/2, h: safeH/2, label: 'Definition', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: m, w: safeW/2, h: safeH/2, label: 'Characteristics', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: m, y: m + safeH/2, w: safeW/2, h: safeH/2, label: 'Examples', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: m + safeH/2, w: safeW/2, h: safeH/2, label: 'Non-Examples', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
         const cw = 220, ch = 80;
         let cFormat = defaultFormat(); cFormat.align = 'center'; cFormat.valign = 'middle';
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW/2 - cw/2, y: m + safeH/2 - ch/2, w: cw, h: ch, label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: cFormat });
+        state.elements.push({ id: generateId(), type: 'box', x: m + safeW/2 - cw/2, y: m + safeH/2 - ch/2, w: cw, h: ch, label: 'Topic / Word', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: cFormat });
       
       } else if (type === 'lab') {
         const col1W = safeW * (392/552); const col2W = safeW * (136/552); 
         const leftX = m + (safeW * (8/552)); const rightX = m + (safeW * (408/552));
         let titleFormat = defaultFormat(); titleFormat.size = 16; titleFormat.bold = true; titleFormat.italic = true;
-        state.elements.push({ id: generateId(), type: 'box', x: leftX, y: m + safeH * (8/768), w: safeW * (400/552), h: safeH * (32/768), label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: false, borderWidth: 2, format: titleFormat });
-        state.elements.push({ id: generateId(), type: 'box', x: leftX, y: m + safeH * (56/768), w: col1W, h: safeH * (72/768), label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (56/768), w: col2W, h: safeH * (72/768), label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (144/768), w: safeW * (135/552), h: safeH * (99/768), label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: leftX, y: m + safeH * (144/768), w: col1W, h: safeH * (616/768), label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (264/768), w: col2W, h: safeH * (224/768), label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (507/768), w: safeW * (135/552), h: safeH * (153/768), label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (678/768), w: safeW * (135/552), h: safeH * (81/768), label: '', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: leftX, y: m + safeH * (8/768), w: safeW * (400/552), h: safeH * (32/768), label: '', labelAlign: 'left', text: 'Lab Title:', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: false, borderWidth: 2, format: titleFormat });
+        state.elements.push({ id: generateId(), type: 'box', x: leftX, y: m + safeH * (56/768), w: col1W, h: safeH * (72/768), label: 'Question / Purpose', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (56/768), w: col2W, h: safeH * (72/768), label: 'Variables', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (144/768), w: safeW * (135/552), h: safeH * (99/768), label: 'Hypothesis', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: leftX, y: m + safeH * (144/768), w: col1W, h: safeH * (616/768), label: 'Procedure & Data', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (264/768), w: col2W, h: safeH * (224/768), label: 'Observations', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (507/768), w: safeW * (135/552), h: safeH * (153/768), label: 'Analysis', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: m + safeH * (678/768), w: safeW * (135/552), h: safeH * (81/768), label: 'Conclusion', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
 
       } else if (type === 'kwl') {
         const colW = safeW / 3;
         let cFmt = defaultFormat(); cFmt.align = 'center';
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: m, w: colW, h: safeH, label: '', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: cFmt });
-        state.elements.push({ id: generateId(), type: 'box', x: m + colW, y: m, w: colW, h: safeH, label: '', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: cFmt });
-        state.elements.push({ id: generateId(), type: 'box', x: m + (colW * 2), y: m, w: colW, h: safeH, label: '', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: cFmt });
+        state.elements.push({ id: generateId(), type: 'box', x: m, y: m, w: colW, h: safeH, label: 'What I Know (K)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: cFmt });
+        state.elements.push({ id: generateId(), type: 'box', x: m + colW, y: m, w: colW, h: safeH, label: 'What I Wonder (W)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: cFmt });
+        state.elements.push({ id: generateId(), type: 'box', x: m + (colW * 2), y: m, w: colW, h: safeH, label: 'What I Learned (L)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: cFmt });
       
       } else if (type === 'tchart') {
         const halfW = safeW / 2;
@@ -1200,14 +1200,14 @@
 
       } else if (type === 'concept') {
         const cX = m + safeW/2; const cY = m + safeH/2; const bW = safeW * 0.25; const bH = 60;
-        state.elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: cY - bH/2, w: bW, h: bH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 3, format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        state.elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: cY - bH/2, w: bW, h: bH, label: 'Main Concept', text: '', bgStyle: 'none', showBorder: true, borderWidth: 3, format: { size: 14, align: 'center', valign: 'middle', bold: true } });
         addConnector(cX, m + bH, cX, cY - bH/2, 'end');
-        state.elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: m, w: bW, h: bH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: m, w: bW, h: bH, label: 'Detail', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, format: defaultFormat() });
         addConnector(cX + bW/2, cY, m + safeW - bW, cY, 'end');
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW - bW, y: cY - bH, w: bW, h: bH*2, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: m + safeW - bW, y: cY - bH, w: bW, h: bH*2, label: 'Detail / Example', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, format: defaultFormat() });
         addConnector(cX, cY + bH/2, cX, m + safeH - bH*1.5, 'end');
         const exW = safeW * 0.8;
-        state.elements.push({ id: generateId(), type: 'box', x: cX - exW/2, y: m + safeH - bH*1.5, w: exW, h: bH*1.5, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, format: defaultFormat() });
+        state.elements.push({ id: generateId(), type: 'box', x: cX - exW/2, y: m + safeH - bH*1.5, w: exW, h: bH*1.5, label: 'Synthesis / Summary', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, format: defaultFormat() });
       }
 
       // Final processing to tag elements to this template group & restore old text
