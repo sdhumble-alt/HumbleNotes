@@ -172,7 +172,7 @@
         <button class="btn btn-hdr" id="btnUndo" onclick="undo()" disabled title="Undo"><i class="ti ti-arrow-back-up"></i></button>
         <button class="btn btn-hdr" id="btnRedo" onclick="redo()" disabled title="Redo"><i class="ti ti-arrow-forward-up"></i></button>
         
-        <div class="toolbar-ver">V 1.5.0 &mdash; 2026-09-29</div>
+        <div class="toolbar-ver">V 1.5.1 &mdash; 2026-10-12</div>
       </div>
     </header>
 
@@ -1968,13 +1968,11 @@
         }
 
         if (el.type === 'box') {
-          // If bgStyle is none, it still gets a white fill to hide underlying lines
           if (el.bgStyle === 'solid') {
              ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x, el.y, el.w, el.h);
           } else if (el.bgStyle !== 'none') {
              ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x, el.y, el.w, el.h);
           } else {
-             // bgStyle === 'none' (actually draw white background if we want to cover lines)
              ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x, el.y, el.w, el.h);
           }
           
@@ -2171,6 +2169,23 @@
       selectElement(curr); drawCanvas();
     }
 
+    // --- Native App Launch & Double-Click Handler ---
+    function checkLaunchPayload() {
+      if (window.location.hash.startsWith('#file=')) {
+        try {
+          const rawB64 = window.location.hash.slice(6);
+          const jsonString = decodeURIComponent(escape(window.atob(rawB64)));
+          restoreState(jsonString);
+          historyStack = [jsonString];
+          historyIndex = 0;
+          updateHistoryButtons();
+          history.replaceState(null, '', window.location.pathname);
+        } catch (err) {
+          console.error("Could not load file from launch parameter:", err);
+        }
+      }
+    }
+
     document.fonts.ready.then(drawCanvas); 
     loadSettings(); 
     handlePaperSizeChange(false);
@@ -2180,7 +2195,10 @@
       const wZoom = (viewport.clientWidth - 80) / logicalW;
       setZoom(Math.min(1.0, wZoom));
       pushHistory();
+      checkLaunchPayload();
     }, 100);
+
+    window.addEventListener('hashchange', checkLaunchPayload);
   </script>
 </body>
 </html>
