@@ -95,6 +95,7 @@
     .btn-green:hover:not(:disabled) { background: var(--btn-green-hover); }
     .btn-danger { background: var(--btn-danger-bg); color: #fff; }
     .btn-danger:hover:not(:disabled) { background: var(--btn-danger-hover); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; justify-content: center; }
 
     /* Button Group Radio Toggles */
@@ -124,8 +125,8 @@
     .canvas-inner-wrapper { min-width: 100%; min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; }
     #mainCanvas { background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: crosshair; transform-origin: center center; }
 
-    .stage-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-    .export-tray { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+    .stage-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 10px; }
+    .export-tray { display: flex; flex-direction: row; align-items: center; gap: 6px; }
 
     /* Formatting Toolbar & Editor */
     .format-bar { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #f8fafc; border: 1px solid var(--card-border); border-radius: 6px 6px 0 0; border-bottom: none; }
@@ -179,7 +180,7 @@
         <button class="btn btn-hdr" id="btnUndo" onclick="undo()" disabled title="Undo"><i class="ti ti-arrow-back-up"></i></button>
         <button class="btn btn-hdr" id="btnRedo" onclick="redo()" disabled title="Redo"><i class="ti ti-arrow-forward-up"></i></button>
         
-        <div class="toolbar-ver">V 1.5.1 &mdash; 2026-10-12</div>
+        <div class="toolbar-ver">V 2.0.0 &mdash; 2026-10-12</div>
       </div>
     </header>
 
@@ -222,6 +223,19 @@
                     <option value="end">End Arrow</option>
                     <option value="both">Both Ends</option>
                   </select>
+                </div>
+                <hr style="border:0; border-top:1px solid var(--card-border); margin: 10px 0;">
+              </div>
+
+              <!-- IMAGE PROPERTIES -->
+              <div id="imgProps" class="hidden">
+                <div class="toggle-row" style="margin-bottom: 6px;">
+                  <input type="checkbox" id="propImgLock" onchange="updateSelectedElement(); pushHistory();" checked>
+                  <label for="propImgLock" style="font-weight: 600; color: #475569;">Lock Aspect Ratio</label>
+                </div>
+                <div class="field-row">
+                  <label for="propImgRotation">Rotation (Degrees)</label>
+                  <input type="number" id="propImgRotation" value="0" oninput="updateSelectedElement(); pushHistory();">
                 </div>
                 <hr style="border:0; border-top:1px solid var(--card-border); margin: 10px 0;">
               </div>
@@ -464,6 +478,11 @@
                 <input type="checkbox" id="showMargins" checked onchange="drawCanvas()">
                 <label for="showMargins" style="color: #64748b;">Show .25" Safe Margins</label>
               </div>
+
+              <!-- Clear Canvas Moved Here -->
+              <div class="btn-row" style="margin-top: 12px; border-top: 1px solid var(--card-border); padding-top: 12px;">
+                <button class="btn btn-danger" onclick="clearCanvas()" style="width: 100%;"><i class="ti ti-eraser"></i> Clear Page Elements</button>
+              </div>
             </div>
           </div>
 
@@ -515,10 +534,8 @@
                 <button class="btn btn-secondary" onclick="addElement('text')"><i class="ti ti-typography"></i> Text Block</button>
                 <button class="btn btn-secondary" onclick="addElement('ellipse')"><i class="ti ti-circle"></i> Ellipse</button>
                 <button class="btn btn-secondary" onclick="addElement('line')"><i class="ti ti-arrow-up-right"></i> Line / Arrow</button>
-                <button class="btn btn-secondary" onclick="addElement('table')" style="grid-column: span 2;"><i class="ti ti-table"></i> Data Table</button>
-              </div>
-              <div class="btn-row" style="margin-top: 8px;">
-                <button class="btn btn-secondary" style="width: 100%;" onclick="document.getElementById('imgUpload').click()"><i class="ti ti-photo"></i> Upload Image File</button>
+                <button class="btn btn-secondary" onclick="addElement('table')"><i class="ti ti-table"></i> Data Table</button>
+                <button class="btn btn-green" onclick="document.getElementById('imgUpload').click()"><i class="ti ti-photo"></i> Upload Image</button>
                 <input type="file" id="imgUpload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
               </div>
             </div>
@@ -551,9 +568,6 @@
                 <button class="btn btn-secondary" onclick="loadTemplate('concept')"><i class="ti ti-bulb"></i> Concept Map</button>
                 <button class="btn btn-secondary" onclick="openTemplateConfig('storyboard')"><i class="ti ti-layout-board"></i> Storyboard Grid...</button>
               </div>
-              <div class="btn-row">
-                <button class="btn btn-danger" onclick="clearCanvas()" style="width: 100%;"><i class="ti ti-trash"></i> Clear Canvas</button>
-              </div>
             </div>
           </div>
         </aside>
@@ -563,6 +577,21 @@
           <div class="stage-header">
             <div class="export-tray">
               <button class="btn btn-primary" onclick="downloadPDF()"><i class="ti ti-file-type-pdf"></i> Download PDF</button>
+              <div class="fmt-divider" style="margin: 0 8px; height: 24px;"></div>
+              
+              <!-- Multi-Page Controls -->
+              <button class="btn btn-secondary" onclick="movePage(-1)" id="btnMovePageLeft" title="Move Page Left"><i class="ti ti-arrow-left"></i></button>
+              <button class="btn btn-secondary" onclick="prevPage()" id="btnPrevPage" title="Previous Page"><i class="ti ti-chevron-left"></i></button>
+              
+              <span style="font-size: 9.5pt; font-weight: bold; color: var(--card-header-title); padding: 0 4px;" id="pageIndicator">Page 1 / 1</span>
+              
+              <button class="btn btn-secondary" onclick="nextPage()" id="btnNextPage" title="Next Page"><i class="ti ti-chevron-right"></i></button>
+              <button class="btn btn-secondary" onclick="movePage(1)" id="btnMovePageRight" title="Move Page Right"><i class="ti ti-arrow-right"></i></button>
+              
+              <div class="fmt-divider" style="margin: 0 4px; height: 18px;"></div>
+              
+              <button class="btn btn-secondary" onclick="addPage()" title="Add New Page"><i class="ti ti-file-plus"></i></button>
+              <button class="btn btn-danger" onclick="deletePage()" id="btnDelPage" title="Delete Current Page"><i class="ti ti-trash"></i></button>
             </div>
             <div style="display: flex; gap: 4px; align-items: center;">
               <button class="btn btn-secondary" onclick="setZoom(state.zoom - 0.1)" title="Zoom Out"><i class="ti ti-minus"></i></button>
@@ -623,8 +652,11 @@
     function getDefaultLineSize() { return parseInt(localStorage.getItem('humbleNoteLineSize')) || 20; }
     function getDefaultGridSize() { return parseInt(localStorage.getItem('humbleNoteGridSize')) || 14; }
 
+    function generateId() { return Math.random().toString(36).substr(2, 9); }
+
     let state = {
-      elements: [], 
+      pages: [ { id: generateId(), elements: [] } ],
+      currentPageIndex: 0,
       selectedId: null,
       selectedCell: { r: 0, c: 0 }, 
       zoom: 1.0,
@@ -641,7 +673,7 @@
     let historyIndex = -1;
 
     function pushHistory() {
-      const snap = JSON.stringify({ elements: state.elements, paper: state.paper, font: state.globalFont });
+      const snap = JSON.stringify({ pages: state.pages, currentPageIndex: state.currentPageIndex, paper: state.paper, font: state.globalFont });
       if (historyIndex >= 0 && historyStack[historyIndex] === snap) return;
       historyStack = historyStack.slice(0, historyIndex + 1);
       historyStack.push(snap);
@@ -671,7 +703,16 @@
 
     function restoreState(snapStr) {
       const snap = JSON.parse(snapStr);
-      state.elements = snap.elements;
+      
+      // Backward compatibility for pre-multipage saves
+      if (snap.elements && !snap.pages) {
+          state.pages = [ { id: generateId(), elements: snap.elements } ];
+          state.currentPageIndex = 0;
+      } else {
+          state.pages = snap.pages;
+          state.currentPageIndex = snap.currentPageIndex || 0;
+      }
+      
       state.paper = snap.paper;
       state.globalFont = snap.font;
       
@@ -694,27 +735,29 @@
         document.getElementById('customSizeRow').classList.add('hidden');
       }
 
-      state.elements.forEach(el => {
-        if (el.type === 'image' && el.img && !el.img.complete) {
-           const src = el.img.src || el.img;
-           el.img = new Image();
-           el.img.src = src;
-           el.img.onload = drawCanvas;
-        }
-        if (el.type === 'table' && !el.cells) {
-           el.cells = buildCells(null, el.rows, el.cols);
-           el.cells[0][0].text = el.text || "";
-        }
-        if (el.type === 'box') {
-           if (!el.lineSize) el.lineSize = getDefaultLineSize();
-           if (!el.gridSize) el.gridSize = getDefaultGridSize();
-           if (!el.borderStyle) el.borderStyle = 'solid';
-        }
+      state.pages.forEach(page => {
+          page.elements.forEach(el => {
+            if (el.type === 'image' && el.img && !el.img.complete) {
+               const src = el.img.src || el.img;
+               el.img = new Image();
+               el.img.src = src;
+               el.img.onload = drawCanvas;
+            }
+            if (el.type === 'table' && !el.cells) {
+               el.cells = buildCells(null, el.rows, el.cols);
+               el.cells[0][0].text = el.text || "";
+            }
+            if (el.type === 'box') {
+               if (!el.lineSize) el.lineSize = getDefaultLineSize();
+               if (!el.gridSize) el.gridSize = getDefaultGridSize();
+               if (!el.borderStyle) el.borderStyle = 'solid';
+            }
+          });
       });
 
       resizeCanvas();
       
-      if (!state.elements.find(e => e.id === state.selectedId)) selectElement(null);
+      if (!state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId)) selectElement(null);
       else selectElement(state.selectedId);
       
       applyZoom(); drawCanvas(); updateHistoryButtons();
@@ -723,6 +766,67 @@
     function updateHistoryButtons() {
       document.getElementById('btnUndo').disabled = historyIndex <= 0;
       document.getElementById('btnRedo').disabled = historyIndex >= historyStack.length - 1;
+    }
+
+    // --- Multi-Page Controls ---
+    function updatePageUI() {
+        document.getElementById('pageIndicator').innerText = `Page ${state.currentPageIndex + 1} / ${state.pages.length}`;
+        document.getElementById('btnPrevPage').disabled = state.currentPageIndex === 0;
+        document.getElementById('btnNextPage').disabled = state.currentPageIndex === state.pages.length - 1;
+        document.getElementById('btnMovePageLeft').disabled = state.currentPageIndex === 0;
+        document.getElementById('btnMovePageRight').disabled = state.currentPageIndex === state.pages.length - 1;
+        document.getElementById('btnDelPage').disabled = state.pages.length <= 1;
+    }
+
+    function addPage() {
+        state.pages.push({ id: generateId(), elements: [] });
+        state.currentPageIndex = state.pages.length - 1;
+        selectElement(null);
+        drawCanvas();
+        pushHistory();
+    }
+
+    function deletePage() {
+        if (state.pages.length > 1) {
+            if (confirm("Are you sure you want to delete this page and all of its elements?")) {
+                state.pages.splice(state.currentPageIndex, 1);
+                if (state.currentPageIndex >= state.pages.length) {
+                    state.currentPageIndex = state.pages.length - 1;
+                }
+                selectElement(null);
+                drawCanvas();
+                pushHistory();
+            }
+        }
+    }
+
+    function prevPage() {
+        if (state.currentPageIndex > 0) {
+            state.currentPageIndex--;
+            selectElement(null);
+            drawCanvas();
+        }
+    }
+
+    function nextPage() {
+        if (state.currentPageIndex < state.pages.length - 1) {
+            state.currentPageIndex++;
+            selectElement(null);
+            drawCanvas();
+        }
+    }
+
+    function movePage(direction) {
+        const newIndex = state.currentPageIndex + direction;
+        if (newIndex >= 0 && newIndex < state.pages.length) {
+            const temp = state.pages[state.currentPageIndex];
+            state.pages[state.currentPageIndex] = state.pages[newIndex];
+            state.pages[newIndex] = temp;
+            state.currentPageIndex = newIndex;
+            selectElement(null);
+            drawCanvas();
+            pushHistory();
+        }
     }
 
     // --- File Management & Local Settings ---
@@ -744,6 +848,8 @@
 
     function newProject() {
       if(confirm("Create a new document? Any unsaved changes will be lost.")) {
+        state.pages = [ { id: generateId(), elements: [] } ];
+        state.currentPageIndex = 0;
         clearCanvas(); historyStack = []; historyIndex = -1; pushHistory();
       }
     }
@@ -812,7 +918,7 @@
       const oldW = state.paper.widthInches;
       const oldH = state.paper.heightInches;
 
-      if (isUserAction && state.elements.length > 0 && (newW !== oldW || newH !== oldH)) {
+      if (isUserAction && state.pages.some(p => p.elements.length > 0) && (newW !== oldW || newH !== oldH)) {
           const choice = await showScaleModal();
           
           if (choice === 'cancel') {
@@ -829,14 +935,16 @@
               const scaleX = newW / oldW;
               const scaleY = newH / oldH;
               const scaleFont = Math.min(scaleX, scaleY);
-              state.elements.forEach(el => {
-                  el.x *= scaleX; el.y *= scaleY; el.w *= scaleX; el.h *= scaleY;
-                  if (el.format && el.format.size) el.format.size = Math.max(8, Math.round(el.format.size * scaleFont));
-                  if (el.type === 'table' && el.cells) {
-                      el.cells.forEach(row => row.forEach(c => {
-                          if (c && c.format && c.format.size) c.format.size = Math.max(8, Math.round(c.format.size * scaleFont));
-                      }));
-                  }
+              state.pages.forEach(page => {
+                  page.elements.forEach(el => {
+                      el.x *= scaleX; el.y *= scaleY; el.w *= scaleX; el.h *= scaleY;
+                      if (el.format && el.format.size) el.format.size = Math.max(8, Math.round(el.format.size * scaleFont));
+                      if (el.type === 'table' && el.cells) {
+                          el.cells.forEach(row => row.forEach(c => {
+                              if (c && c.format && c.format.size) c.format.size = Math.max(8, Math.round(c.format.size * scaleFont));
+                          }));
+                      }
+                  });
               });
           }
       }
@@ -886,6 +994,16 @@
       if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(state.zoom + (e.deltaY > 0 ? -0.1 : 0.1)); }
     }, { passive: false });
 
+    // Click outside canvas to deselect
+    viewport.addEventListener('mousedown', function(evt) {
+        if (evt.target === viewport || evt.target.classList.contains('canvas-inner-wrapper')) {
+            if (state.selectedId) {
+                selectElement(null);
+                drawCanvas();
+            }
+        }
+    });
+
     // --- Templates Modal Engine ---
     let pendingTemplateType = null;
     let editingTemplateId = null;
@@ -909,7 +1027,7 @@
 
     function editCurrentTemplate() {
        if (!state.selectedId) return;
-       const el = state.elements.find(e => e.id === state.selectedId);
+       const el = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
        if (!el || !el.templateId) return;
        editingTemplateId = el.templateId;
        openTemplateConfig(el.templateType, el.templateCfg);
@@ -985,9 +1103,9 @@
       document.getElementById('templateModal').classList.add('hidden');
       
       if (editingTemplateId) {
-         const oldEls = state.elements.filter(e => e.templateId === editingTemplateId);
+         const oldEls = state.pages[state.currentPageIndex].elements.filter(e => e.templateId === editingTemplateId);
          const oldTexts = oldEls.filter(e => e.type !== 'line').map(e => e.text);
-         state.elements = state.elements.filter(e => e.templateId !== editingTemplateId);
+         state.pages[state.currentPageIndex].elements = state.pages[state.currentPageIndex].elements.filter(e => e.templateId !== editingTemplateId);
          loadTemplate(pendingTemplateType, cfg, editingTemplateId, oldTexts);
          editingTemplateId = null;
       } else {
@@ -996,8 +1114,6 @@
     }
 
     // --- Template Generation Core ---
-    function generateId() { return Math.random().toString(36).substr(2, 9); }
-    
     function buildCells(oldCells, rows, cols) {
       const newCells = [];
       for (let r=0; r<rows; r++) {
@@ -1020,14 +1136,14 @@
     }
 
     function loadTemplate(type, cfg = null, existingId = null, existingTexts = []) {
-      const startIndex = state.elements.length;
+      const startIndex = state.pages[state.currentPageIndex].elements.length;
       const tId = existingId || generateId();
 
       const m = 0.25 * DPI; 
       
       // Dynamic margin check to start templates BELOW any placed page titles/numbers
       let mTop = m;
-      const headerEls = state.elements.filter(e => e.y < m + 50); 
+      const headerEls = state.pages[state.currentPageIndex].elements.filter(e => e.y < m + 50); 
       if (headerEls.length > 0) {
          mTop = Math.max(...headerEls.map(e => e.y + e.h)) + 15; // 15px gap below titles
       }
@@ -1050,74 +1166,71 @@
          else if ((x1 < x2 && y1 > y2)) { lType = 'diag-up'; flip = false; }
          else if ((x1 > x2 && y1 < y2)) { lType = 'diag-up'; flip = true; }
          
-         state.elements.push({ id: generateId(), type: 'line', x: minX, y: minY, w: w, h: h, lineType: lType, arrowType: aType, flipLine: flip, showBorder: false, borderWidth: 2, borderStyle: 'solid' });
+         state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'line', x: minX, y: minY, w: w, h: h, lineType: lType, arrowType: aType, flipLine: flip, showBorder: false, borderWidth: 2, borderStyle: 'solid' });
       };
 
       if (type === 'cornell') {
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: safeW, h: safeH * 0.1, label: 'Topic / Objective:', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop + safeH * 0.1 + 15, w: safeW * 0.3 - 5, h: safeH * 0.7 - 30, label: 'Questions / Cues:', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW * 0.3 + 5, y: mTop + safeH * 0.1 + 15, w: safeW * 0.7 - 5, h: safeH * 0.7 - 30, label: 'Notes:', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop + safeH * 0.8, w: safeW, h: safeH * 0.2, label: 'Summary:', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: safeW, h: safeH * 0.1, label: 'Topic / Objective:', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + safeH * 0.1 + 15, w: safeW * 0.3 - 5, h: safeH * 0.7 - 30, label: 'Questions / Cues:', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW * 0.3 + 5, y: mTop + safeH * 0.1 + 15, w: safeW * 0.7 - 5, h: safeH * 0.7 - 30, label: 'Notes:', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + safeH * 0.8, w: safeW, h: safeH * 0.2, label: 'Summary:', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
       
       } else if (type === 'frayer') {
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: safeW/2, h: safeH/2, label: 'Definition', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: mTop, w: safeW/2, h: safeH/2, label: 'Characteristics', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop + safeH/2, w: safeW/2, h: safeH/2, label: 'Examples', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: mTop + safeH/2, w: safeW/2, h: safeH/2, label: 'Non-Examples', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: safeW/2, h: safeH/2, label: 'Definition', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: mTop, w: safeW/2, h: safeH/2, label: 'Characteristics', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + safeH/2, w: safeW/2, h: safeH/2, label: 'Examples', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: mTop + safeH/2, w: safeW/2, h: safeH/2, label: 'Non-Examples', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
         const cw = 220, ch = 80;
         let cFormat = defaultFormat(); cFormat.align = 'center'; cFormat.valign = 'middle';
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW/2 - cw/2, y: mTop + safeH/2 - ch/2, w: cw, h: ch, label: 'Topic / Word', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFormat });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW/2 - cw/2, y: mTop + safeH/2 - ch/2, w: cw, h: ch, label: 'Topic / Word', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFormat });
       
       } else if (type === 'vocab') {
         const col1W = safeW * 0.35;
         const col2W = safeW * 0.65;
         let cFmt = defaultFormat(); cFmt.align = 'center'; cFmt.size = 14; cFmt.bold = true;
         
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: col1W, h: 40, label: '', text: 'Term', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
-        state.elements.push({ id: generateId(), type: 'box', x: m + col1W, y: mTop, w: col2W, h: 40, label: '', text: 'Definition', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: col1W, h: 40, label: '', text: 'Term', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + col1W, y: mTop, w: col2W, h: 40, label: '', text: 'Definition', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
         
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop + 40, w: col1W, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m + col1W, y: mTop + 40, w: col2W, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + 40, w: col1W, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + col1W, y: mTop + 40, w: col2W, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
 
       } else if (type === 'lab') {
-        // Redefined relative fractions so it fills 100% of the available safeH perfectly without needing a Lab Title
         const col1W = safeW * (392/552); 
         const col2W = safeW * (136/552); 
         const leftX = m + (safeW * (8/552)); 
         const rightX = m + (safeW * (408/552));
         
-        state.elements.push({ id: generateId(), type: 'box', x: leftX, y: mTop, w: col1W, h: safeH * (72/703), label: 'Question / Purpose', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop, w: col2W, h: safeH * (72/703), label: 'Variables', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (88/703), w: safeW * (135/552), h: safeH * (99/703), label: 'Hypothesis', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: leftX, y: mTop + safeH * (88/703), w: col1W, h: safeH * (615/703), label: 'Procedure & Data', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (208/703), w: col2W, h: safeH * (224/703), label: 'Observations', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (451/703), w: safeW * (135/552), h: safeH * (153/703), label: 'Analysis', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (622/703), w: safeW * (135/552), h: safeH * (81/703), label: 'Conclusion', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: leftX, y: mTop, w: col1W, h: safeH * (72/703), label: 'Question / Purpose', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop, w: col2W, h: safeH * (72/703), label: 'Variables', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (88/703), w: safeW * (135/552), h: safeH * (99/703), label: 'Hypothesis', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: leftX, y: mTop + safeH * (88/703), w: col1W, h: safeH * (615/703), label: 'Procedure & Data', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (208/703), w: col2W, h: safeH * (224/703), label: 'Observations', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (451/703), w: safeW * (135/552), h: safeH * (153/703), label: 'Analysis', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (622/703), w: safeW * (135/552), h: safeH * (81/703), label: 'Conclusion', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
 
       } else if (type === 'kwl') {
         const colW = safeW / 3;
         let cFmt = defaultFormat(); cFmt.align = 'center';
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: colW, h: safeH, label: 'What I Know (K)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
-        state.elements.push({ id: generateId(), type: 'box', x: m + colW, y: mTop, w: colW, h: safeH, label: 'What I Wonder (W)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
-        state.elements.push({ id: generateId(), type: 'box', x: m + (colW * 2), y: mTop, w: colW, h: safeH, label: 'What I Learned (L)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: colW, h: safeH, label: 'What I Know (K)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + colW, y: mTop, w: colW, h: safeH, label: 'What I Wonder (W)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + (colW * 2), y: mTop, w: colW, h: safeH, label: 'What I Learned (L)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
       
       } else if (type === 'tchart') {
         const halfW = safeW / 2;
         let cFmt = defaultFormat(); cFmt.align = 'center'; cFmt.size = 14; cFmt.bold = true;
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: halfW, h: 40, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
-        state.elements.push({ id: generateId(), type: 'box', x: m + halfW, y: mTop, w: halfW, h: 40, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
-        state.elements.push({ id: generateId(), type: 'box', x: m, y: mTop + 40, w: halfW, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'box', x: m + halfW, y: mTop + 40, w: halfW, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: halfW, h: 40, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + halfW, y: mTop, w: halfW, h: 40, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + 40, w: halfW, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + halfW, y: mTop + 40, w: halfW, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
 
       } else if (type === 'venn') {
         const rW = safeW * 0.6; const rH = safeH * 0.5; const yPos = mTop + (safeH * 0.25);
         let tFmt = defaultFormat(); tFmt.align = 'center'; tFmt.bold = true; tFmt.size = 14;
-        // Draw ellipses first
-        state.elements.push({ id: generateId(), type: 'ellipse', x: m + (safeW * 0.05), y: yPos, w: rW, h: rH, text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        state.elements.push({ id: generateId(), type: 'ellipse', x: m + (safeW * 0.35), y: yPos, w: rW, h: rH, text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-        // Draw text inside the top of the circles
-        state.elements.push({ id: generateId(), type: 'text', x: m + (safeW * 0.05), y: yPos + 20, w: rW, h: 30, text: '', showBorder: false, format: tFmt });
-        state.elements.push({ id: generateId(), type: 'text', x: m + (safeW * 0.35), y: yPos + 20, w: rW, h: 30, text: '', showBorder: false, format: tFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: m + (safeW * 0.05), y: yPos, w: rW, h: rH, text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: m + (safeW * 0.35), y: yPos, w: rW, h: rH, text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'text', x: m + (safeW * 0.05), y: yPos + 20, w: rW, h: 30, text: '', showBorder: false, format: tFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'text', x: m + (safeW * 0.35), y: yPos + 20, w: rW, h: 30, text: '', showBorder: false, format: tFmt });
       
       } else if (type === 'bubble') {
         const n = cfg?.val1 || 4;
@@ -1130,9 +1243,9 @@
             const angle = (i/n) * 2 * Math.PI - (Math.PI/2);
             const bx = cX + rad * Math.cos(angle); const by = cY + rad * Math.sin(angle);
             addConnector(cX, cY, bx, by, 'none');
-            state.elements.push({ id: generateId(), type: 'ellipse', x: bx - oW/2, y: by - oH/2, w: oW, h: oH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: bx - oW/2, y: by - oH/2, w: oW, h: oH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
         }
-        state.elements.push({ id: generateId(), type: 'ellipse', x: cX - cW/2, y: cY - cH/2, w: cW, h: cH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: cX - cW/2, y: cY - cH/2, w: cW, h: cH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
       
       } else if (type === 'double-bubble') {
         const leftCount = cfg?.val1 || 2;
@@ -1142,32 +1255,29 @@
         const mainW = 140; const mainH = 140; const subW = 100; const subH = 100;
         const cY = mTop + safeH/2; const lX = m + safeW*0.3; const rX = m + safeW*0.7;
 
-        // Shared Center
         const sGap = safeH / (sharedCount + 1);
         for(let i=0; i<sharedCount; i++) {
             const my = mTop + sGap + (i * sGap);
             addConnector(lX, cY, m + safeW/2, my, 'none'); addConnector(rX, cY, m + safeW/2, my, 'none');
-            state.elements.push({ id: generateId(), type: 'ellipse', x: m + safeW/2 - subW/2, y: my - subH/2, w: subW, h: subH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: m + safeW/2 - subW/2, y: my - subH/2, w: subW, h: subH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
         }
 
-        // Unique Left
         const lGap = safeH / (leftCount + 1);
         for(let i=0; i<leftCount; i++) {
             const ly = mTop + lGap + (i * lGap);
             addConnector(m + safeW*0.1, ly, lX, cY, 'none');
-            state.elements.push({ id: generateId(), type: 'ellipse', x: m + safeW*0.1 - subW/2, y: ly - subH/2, w: subW, h: subH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: m + safeW*0.1 - subW/2, y: ly - subH/2, w: subW, h: subH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
         }
         
-        // Unique Right
         const rGap = safeH / (rightCount + 1);
         for(let i=0; i<rightCount; i++) {
             const ry = mTop + rGap + (i * rGap);
             addConnector(rX, cY, m + safeW*0.9, ry, 'none');
-            state.elements.push({ id: generateId(), type: 'ellipse', x: m + safeW*0.9 - subW/2, y: ry - subH/2, w: subW, h: subH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: m + safeW*0.9 - subW/2, y: ry - subH/2, w: subW, h: subH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
         }
 
-        state.elements.push({ id: generateId(), type: 'ellipse', x: lX - mainW/2, y: cY - mainH/2, w: mainW, h: mainH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
-        state.elements.push({ id: generateId(), type: 'ellipse', x: rX - mainW/2, y: cY - mainH/2, w: mainW, h: mainH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: lX - mainW/2, y: cY - mainH/2, w: mainW, h: mainH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: rX - mainW/2, y: cY - mainH/2, w: mainW, h: mainH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
 
       } else if (type === 'flow') {
         const n = cfg?.val1 || 4;
@@ -1179,7 +1289,7 @@
 
         for(let i=0; i<n; i++) {
             const bX = startX + (i * (boxW + gap));
-            state.elements.push({ id: generateId(), type: 'box', x: bX, y: startY, w: boxW, h: boxH, label: '', labelAlign: 'left', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: bX, y: startY, w: boxW, h: boxH, label: '', labelAlign: 'left', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
             if(i < n-1) { addConnector(bX + boxW, startY + boxH/2, bX + boxW + gap, startY + boxH/2, 'end'); }
         }
 
@@ -1194,8 +1304,8 @@
             for(let c=0; c<cols; c++) {
                 const sX = m + (c * (cellW + gapX));
                 const sY = mTop + (r * (cellH + gapY));
-                state.elements.push({ id: generateId(), type: 'box', x: sX, y: sY, w: cellW, h: drawH, label: '', labelAlign: 'left', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
-                state.elements.push({ id: generateId(), type: 'box', x: sX, y: sY + drawH, w: cellW, h: textH, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+                state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: sX, y: sY, w: cellW, h: drawH, label: '', labelAlign: 'left', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+                state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: sX, y: sY + drawH, w: cellW, h: textH, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
             }
         }
 
@@ -1213,7 +1323,7 @@
         
         for(let i=0; i<n; i++) { addConnector(pos[i].x, pos[i].y, pos[(i+1)%n].x, pos[(i+1)%n].y, 'end'); }
         for(let i=0; i<n; i++) {
-            state.elements.push({ id: generateId(), type: 'ellipse', x: pos[i].x - bW/2, y: pos[i].y - bH/2, w: bW, h: bH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: pos[i].x - bW/2, y: pos[i].y - bH/2, w: bW, h: bH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
         }
 
       } else if (type === 'tree') {
@@ -1221,7 +1331,7 @@
         const boxW = Math.min(200, (safeW - (20 * (n-1))) / n); 
         const boxH = 50; const cX = m + safeW/2;
         
-        state.elements.push({ id: generateId(), type: 'box', x: cX - boxW/2, y: mTop, w: boxW, h: boxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: cX - boxW/2, y: mTop, w: boxW, h: boxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
         addConnector(cX, mTop + boxH, cX, mTop + boxH + 40, 'none');
         
         const barY = mTop + boxH + 40;
@@ -1232,8 +1342,8 @@
         for(let i=0; i<n; i++) {
             const xPos = n === 1 ? cX : m + boxW/2 + (i * (boxW + gap));
             addConnector(xPos, barY, xPos, barY + 30, 'none');
-            state.elements.push({ id: generateId(), type: 'box', x: xPos - boxW/2, y: barY + 30, w: boxW, h: boxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
-            state.elements.push({ id: generateId(), type: 'box', x: xPos - boxW/2, y: barY + 30 + boxH + 20, w: boxW, h: safeH - (barY + 30 + boxH + 20), label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: xPos - boxW/2, y: barY + 30, w: boxW, h: boxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: xPos - boxW/2, y: barY + 30 + boxH + 20, w: boxW, h: safeH - (barY + 30 + boxH + 20), label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
         }
 
       } else if (type === 'brace') {
@@ -1242,13 +1352,13 @@
         const col1X = m; const col1W = safeW * 0.2; const col2X = m + safeW * 0.35; const col2W = safeW * 0.25; const col3X = m + safeW * 0.7; const col3W = safeW * 0.3;
         const bH = Math.min(60, safeH / (majorN * 2)); const cY = mTop + safeH/2;
 
-        state.elements.push({ id: generateId(), type: 'box', x: col1X, y: cY - bH/2, w: col1W, h: bH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: col1X, y: cY - bH/2, w: col1W, h: bH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
         
         const majorGap = safeH / majorN;
         for(let i=0; i<majorN; i++) {
             const py = mTop + (majorGap / 2) + (i * majorGap);
             addConnector(col1X + col1W, cY, col2X, py, 'none');
-            state.elements.push({ id: generateId(), type: 'box', x: col2X, y: py - bH/2, w: col2W, h: bH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: col2X, y: py - bH/2, w: col2W, h: bH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
             
             const minorN = subpartsArr[i] || 0;
             if (minorN > 0) {
@@ -1256,7 +1366,7 @@
                for(let j=0; j<minorN; j++) {
                    const spy = py - (majorGap/2) + (minorGap/2) + (j * minorGap);
                    addConnector(col2X + col2W, py, col3X, spy, 'none');
-                   state.elements.push({ id: generateId(), type: 'box', x: col3X, y: spy - bH/3, w: col3W, h: bH*0.66, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 10, align: 'left', valign: 'middle' } });
+                   state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: col3X, y: spy - bH/3, w: col3W, h: bH*0.66, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 10, align: 'left', valign: 'middle' } });
                }
             }
         }
@@ -1264,37 +1374,35 @@
       } else if (type === 'fishbone') {
         const cY = mTop + safeH/2; const headW = 140; const headH = 80;
         
-        // Push lines and bone boxes FIRST
-        addConnector(m + 40, cY, m + safeW - headW, cY, 'end'); // Spine
+        addConnector(m + 40, cY, m + safeW - headW, cY, 'end'); 
         const bWs = [m + safeW*0.25, m + safeW*0.5, m + safeW*0.75]; const boneH = safeH * 0.35; const boneBoxW = 120; const boneBoxH = 50;
 
         bWs.forEach(bx => {
             addConnector(bx - boneBoxW/2 + boneBoxW, cY - boneH + boneBoxH, bx, cY, 'none');
-            state.elements.push({ id: generateId(), type: 'box', x: bx - boneBoxW, y: cY - boneH, w: boneBoxW, h: boneBoxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: bx - boneBoxW, y: cY - boneH, w: boneBoxW, h: boneBoxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
             
             addConnector(bx - boneBoxW/2 + boneBoxW, cY + boneH - boneBoxH, bx, cY, 'none');
-            state.elements.push({ id: generateId(), type: 'box', x: bx - boneBoxW, y: cY + boneH - boneBoxH, w: boneBoxW, h: boneBoxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: bx - boneBoxW, y: cY + boneH - boneBoxH, w: boneBoxW, h: boneBoxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
         });
 
-        // Push the Effect box LAST to ensure it renders on top of the lines
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW - headW + 10, y: cY - headH/2, w: headW - 10, h: headH, label: '', text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW - headW + 10, y: cY - headH/2, w: headW - 10, h: headH, label: '', text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
 
       } else if (type === 'concept') {
         const cX = m + safeW/2; const cY = mTop + safeH/2; const bW = safeW * 0.25; const bH = 60;
-        state.elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: cY - bH/2, w: bW, h: bH, label: 'Main Concept', text: '', bgStyle: 'none', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: cY - bH/2, w: bW, h: bH, label: 'Main Concept', text: '', bgStyle: 'none', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
         addConnector(cX, mTop + bH, cX, cY - bH/2, 'end');
-        state.elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: mTop, w: bW, h: bH, label: 'Detail', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: mTop, w: bW, h: bH, label: 'Detail', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
         addConnector(cX + bW/2, cY, m + safeW - bW, cY, 'end');
-        state.elements.push({ id: generateId(), type: 'box', x: m + safeW - bW, y: cY - bH, w: bW, h: bH*2, label: 'Detail / Example', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW - bW, y: cY - bH, w: bW, h: bH*2, label: 'Detail / Example', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
         addConnector(cX, cY + bH/2, cX, mTop + safeH - bH*1.5, 'end');
         const exW = safeW * 0.8;
-        state.elements.push({ id: generateId(), type: 'box', x: cX - exW/2, y: mTop + safeH - bH*1.5, w: exW, h: bH*1.5, label: 'Synthesis / Summary', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: cX - exW/2, y: mTop + safeH - bH*1.5, w: exW, h: bH*1.5, label: 'Synthesis / Summary', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
       }
 
       // Final processing to tag elements to this template group & restore old text
       let textIndex = 0;
-      for (let i = startIndex; i < state.elements.length; i++) {
-         const el = state.elements[i];
+      for (let i = startIndex; i < state.pages[state.currentPageIndex].elements.length; i++) {
+         const el = state.pages[state.currentPageIndex].elements[i];
          el.templateId = tId;
          el.templateType = type;
          el.templateCfg = cfg;
@@ -1324,7 +1432,7 @@
         el.cells = buildCells(null, 3, 3); 
         for(let c=0; c<3; c++) { el.cells[0][c].text = "<b>Header</b>"; }
       }
-      state.elements.push(el); state.selectedCell = {r:0, c:0}; selectElement(el.id); drawCanvas(); pushHistory();
+      state.pages[state.currentPageIndex].elements.push(el); state.selectedCell = {r:0, c:0}; selectElement(el.id); drawCanvas(); pushHistory();
     }
 
     function addPageTitle() {
@@ -1350,13 +1458,13 @@
       if (type === 'number') {
         const x = align === 'left' ? m : pageW - m - pnW;
         const el = { id: generateId(), type: 'box', x: x, y: y, w: pnW, h: pnH, text: "Pg.&nbsp;", label: "", bgStyle: "none", showBorder: false, borderWidth: 1, borderStyle: 'solid', format: pFormat };
-        state.elements.push(el);
+        state.pages[state.currentPageIndex].elements.push(el);
         selectElement(el.id);
       } else if (type === 'title') {
         const tW = pageW - (2 * m); // Take up remaining width to both borders
         const x = m; 
         const el = { id: generateId(), type: 'box', x: x, y: y, w: tW, h: tH, text: "Title", label: "", bgStyle: "none", showBorder: false, borderWidth: 1, borderStyle: 'solid', format: tFormat };
-        state.elements.push(el);
+        state.pages[state.currentPageIndex].elements.push(el);
         selectElement(el.id);
       } else if (type === 'both') {
         const tW = pageW - (2 * m) - pnW; // Remaining width after page number
@@ -1368,14 +1476,14 @@
         } else {
           pnX = pageW - m - pnW;
           tX = m; 
-          pFormat.align = 'left'; // Page number text alignment shifts to left as requested
+          pFormat.align = 'left'; 
         }
         
         const elNum = { id: generateId(), type: 'box', x: pnX, y: y, w: pnW, h: pnH, text: "Pg.&nbsp;", label: "", bgStyle: "none", showBorder: false, borderWidth: 1, borderStyle: 'solid', format: pFormat };
         const elTitle = { id: generateId(), type: 'box', x: tX, y: y, w: tW, h: tH, text: "Title", label: "", bgStyle: "none", showBorder: false, borderWidth: 1, borderStyle: 'solid', format: tFormat };
         
-        state.elements.push(elNum);
-        state.elements.push(elTitle);
+        state.pages[state.currentPageIndex].elements.push(elNum);
+        state.pages[state.currentPageIndex].elements.push(elTitle);
         selectElement(elNum.id);
       }
       
@@ -1394,15 +1502,22 @@
           cvs.getContext('2d').drawImage(img, 0, 0);
           const dataURL = cvs.toDataURL();
           const storedImg = new Image(); storedImg.src = dataURL;
-          const el = { id: generateId(), type: 'image', x: 100, y: 100, w: 300, h: 300 * (img.height / img.width), img: storedImg, showBorder: false, borderWidth: 2, borderStyle: 'solid' };
-          state.elements.push(el); selectElement(el.id); drawCanvas(); pushHistory();
+          
+          const el = { 
+            id: generateId(), type: 'image', x: 100, y: 100, 
+            w: 300, h: 300 * (img.height / img.width), 
+            img: storedImg, showBorder: false, borderWidth: 2, borderStyle: 'solid',
+            aspectLocked: true, originalRatio: 300 / (300 * (img.height / img.width)), rotation: 0
+          };
+          
+          state.pages[state.currentPageIndex].elements.push(el); selectElement(el.id); drawCanvas(); pushHistory();
         }
         img.src = event.target.result;
       }
       reader.readAsDataURL(file); e.target.value = '';
     }
 
-    function clearCanvas() { state.elements = []; selectElement(null); drawCanvas(); pushHistory(); }
+    function clearCanvas() { state.pages[state.currentPageIndex].elements = []; selectElement(null); drawCanvas(); pushHistory(); }
 
     // --- Rich Text Editing Engine ---
     function execCmd(command, value=null) {
@@ -1500,13 +1615,13 @@
       }
       else if (cmdCtrl && (e.key === 'c' || e.key === 'C')) {
         if (state.selectedId) {
-          const el = state.elements.find(e => e.id === state.selectedId);
+          const el = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
           if (el) clipboardData = cloneElementData(el);
         }
       }
       else if (cmdCtrl && (e.key === 'x' || e.key === 'X')) {
         if (state.selectedId) {
-          const el = state.elements.find(e => e.id === state.selectedId);
+          const el = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
           if (el) {
             clipboardData = cloneElementData(el);
             deleteSelected();
@@ -1519,7 +1634,7 @@
           newEl.id = generateId();
           newEl.x += 20;
           newEl.y += 20;
-          state.elements.push(newEl);
+          state.pages[state.currentPageIndex].elements.push(newEl);
           selectElement(newEl.id);
           drawCanvas();
           pushHistory();
@@ -1550,22 +1665,33 @@
 
     function selectElement(id) {
       state.selectedId = id;
-      const panel = document.getElementById('propPanel');
-      if (!id) { panel.classList.add('hidden'); return; }
+      const propPanel = document.getElementById('propPanel');
+      const allGroups = document.querySelectorAll('#controls-panel .opt-group');
       
-      const el = state.elements.find(e => e.id === id);
+      if (!id) { 
+        allGroups.forEach(g => {
+            if (g.id === 'propPanel') g.classList.add('hidden');
+            else g.classList.remove('hidden');
+        });
+        return; 
+      }
+      
+      allGroups.forEach(g => {
+          if (g.id === 'propPanel') g.classList.remove('hidden');
+          else g.classList.add('hidden');
+      });
+      
+      const el = state.pages[state.currentPageIndex].elements.find(e => e.id === id);
       if (!el) return;
       
       if (el.format && !el.format.valign) el.format.valign = 'top';
 
-      panel.classList.remove('hidden');
       document.getElementById('propText').innerHTML = getActiveText(el);
       
       let currentStyle = (el.showBorder === false) ? 'none' : (el.borderStyle || 'solid');
       const borderRadio = document.querySelector(`input[name="propBorderStyle"][value="${currentStyle}"]`);
       if (borderRadio) borderRadio.checked = true;
       
-      // Dynamic UI logic for showing "Edit Structure" button
       const tRow = document.getElementById('templateEditRow');
       if (el.templateId && ['bubble', 'double-bubble', 'flow', 'cycle', 'tree', 'brace', 'storyboard'].includes(el.templateType)) {
           tRow.style.display = 'flex';
@@ -1573,11 +1699,15 @@
           tRow.style.display = 'none';
       }
       
-      // Toggle visibility of text editor
       document.getElementById('textPropRow').style.display = (el.type === 'image' || el.type === 'line') ? 'none' : 'flex';
       
-      const boxP = document.getElementById('boxProps'), tblP = document.getElementById('tableProps'), tblCellUI = document.getElementById('tableCellSettings'), lineP = document.getElementById('lineProps');
-      boxP.classList.add('hidden'); tblP.classList.add('hidden'); tblCellUI.classList.add('hidden'); lineP.classList.add('hidden');
+      const boxP = document.getElementById('boxProps'), 
+            tblP = document.getElementById('tableProps'), 
+            tblCellUI = document.getElementById('tableCellSettings'), 
+            lineP = document.getElementById('lineProps'),
+            imgP = document.getElementById('imgProps');
+            
+      boxP.classList.add('hidden'); tblP.classList.add('hidden'); tblCellUI.classList.add('hidden'); lineP.classList.add('hidden'); imgP.classList.add('hidden');
 
       if (el.type === 'box') {
         boxP.classList.remove('hidden');
@@ -1609,6 +1739,10 @@
         lineP.classList.remove('hidden');
         document.getElementById('propLineType').value = el.lineType || 'horizontal';
         document.getElementById('propArrowType').value = el.arrowType || 'none';
+      } else if (el.type === 'image') {
+        imgP.classList.remove('hidden');
+        document.getElementById('propImgLock').checked = el.aspectLocked !== false;
+        document.getElementById('propImgRotation').value = el.rotation || 0;
       }
 
       let fmt = el.format;
@@ -1633,7 +1767,7 @@
 
     function updateSelectedElement() {
       if (!state.selectedId) return;
-      const el = state.elements.find(e => e.id === state.selectedId);
+      const el = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
       if (!el) return;
       
       setActiveText(el, document.getElementById('propText').innerHTML);
@@ -1689,13 +1823,16 @@
       } else if (el.type === 'line') {
         el.lineType = document.getElementById('propLineType').value;
         el.arrowType = document.getElementById('propArrowType').value;
+      } else if (el.type === 'image') {
+        el.aspectLocked = document.getElementById('propImgLock').checked;
+        el.rotation = parseInt(document.getElementById('propImgRotation').value) || 0;
       }
       drawCanvas();
     }
 
     function updateFormat(type, val) {
       if (!state.selectedId) return;
-      const el = state.elements.find(e => e.id === state.selectedId);
+      const el = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
       if (!el) return;
 
       const v = (type === 'size') ? parseInt(val) : val;
@@ -1717,7 +1854,7 @@
 
     function deleteSelected() {
       if (!state.selectedId) return;
-      state.elements = state.elements.filter(e => e.id !== state.selectedId);
+      state.pages[state.currentPageIndex].elements = state.pages[state.currentPageIndex].elements.filter(e => e.id !== state.selectedId);
       selectElement(null); drawCanvas(); pushHistory();
     }
 
@@ -1731,6 +1868,18 @@
         y: (evt.clientY - r.top) * (logicalH / r.height) 
       };
     }
+    
+    // Maps a global mouse coordinate into an element's local un-rotated coordinate space
+    function getLocalPos(pos, el) {
+        if (!el.rotation) return pos;
+        const cx = el.x + el.w / 2;
+        const cy = el.y + el.h / 2;
+        const angle = -el.rotation * Math.PI / 180;
+        return {
+            x: Math.cos(angle) * (pos.x - cx) - Math.sin(angle) * (pos.y - cy) + cx,
+            y: Math.sin(angle) * (pos.x - cx) + Math.cos(angle) * (pos.y - cy) + cy
+        };
+    }
 
     function calculateSnaps(el) {
       state.activeGuides = [];
@@ -1743,7 +1892,7 @@
       const eL = el.x, eR = el.x + el.w, eCX = el.x + (el.w/2);
       const eT = el.y, eB = el.y + el.h, eCY = el.y + (el.h/2);
 
-      for (const other of state.elements) {
+      for (const other of state.pages[state.currentPageIndex].elements) {
         if (other.id === el.id) continue;
         const oL = other.x, oR = other.x + other.w, oCX = other.x + (other.w/2);
         const oT = other.y, oB = other.y + other.h, oCY = other.y + (other.h/2);
@@ -1780,7 +1929,7 @@
       let snapW = propW, snapH = propH;
       let snappedW = false, snappedH = false;
 
-      for (const other of state.elements) {
+      for (const other of state.pages[state.currentPageIndex].elements) {
         if (other.id === el.id) continue;
         const oL = other.x, oR = other.x + other.w, oCX = other.x + (other.w/2);
         const oT = other.y, oB = other.y + other.h, oCY = other.y + (other.h/2);
@@ -1812,16 +1961,16 @@
       let clickedId = null; let cellClick = null;
       isDragging = false; isResizing = false;
 
-      // Check if we are hovering a table column separator for custom column resizing
       let hoverColSep = null;
-      for (let i = state.elements.length - 1; i >= 0; i--) {
-         const el = state.elements[i];
-         if (el.type === 'table' && el.customCols && pos.y >= el.y && pos.y <= el.y + el.h && pos.x >= el.x && pos.x <= el.x + el.w) {
+      for (let i = state.pages[state.currentPageIndex].elements.length - 1; i >= 0; i--) {
+         const el = state.pages[state.currentPageIndex].elements[i];
+         const lPos = getLocalPos(pos, el);
+         if (el.type === 'table' && el.customCols && lPos.y >= el.y && lPos.y <= el.y + el.h && lPos.x >= el.x && lPos.x <= el.x + el.w) {
             let currentOffset = 0;
             for (let c=1; c<el.cols; c++) {
                currentOffset += el.colRatios[c-1];
                const lx = el.x + (currentOffset * el.w);
-               if (Math.abs(pos.x - lx) < 6) {
+               if (Math.abs(lPos.x - lx) < 6) {
                   hoverColSep = { id: el.id, col: c };
                   break;
                }
@@ -1836,31 +1985,34 @@
       }
 
       if (state.selectedId) {
-        const selEl = state.elements.find(e => e.id === state.selectedId);
+        const selEl = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
         if (selEl) {
+          const lPos = getLocalPos(pos, selEl);
           const hX = selEl.x + selEl.w - (HANDLE_SIZE * 1.5), hY = selEl.y + selEl.h - (HANDLE_SIZE * 1.5);
-          if (pos.x >= hX && pos.x <= hX + (HANDLE_SIZE*3) && pos.y >= hY && pos.y <= hY + (HANDLE_SIZE*3)) { isResizing = true; return; }
+          if (lPos.x >= hX && lPos.x <= hX + (HANDLE_SIZE*3) && lPos.y >= hY && lPos.y <= hY + (HANDLE_SIZE*3)) { isResizing = true; return; }
         }
       }
 
-      for (let i = state.elements.length - 1; i >= 0; i--) {
-        const el = state.elements[i];
-        if (pos.x >= el.x && pos.x <= el.x + el.w && pos.y >= el.y && pos.y <= el.y + el.h) {
+      for (let i = state.pages[state.currentPageIndex].elements.length - 1; i >= 0; i--) {
+        const el = state.pages[state.currentPageIndex].elements[i];
+        const lPos = getLocalPos(pos, el);
+        if (lPos.x >= el.x && lPos.x <= el.x + el.w && lPos.y >= el.y && lPos.y <= el.y + el.h) {
           clickedId = el.id; isDragging = true;
-          dragOffsetX = pos.x - el.x; dragOffsetY = pos.y - el.y;
+          // Drag uses world offset so it feels 1:1 mapped to mouse, regardless of rotation
+          dragOffsetX = pos.x - el.x; dragOffsetY = pos.y - el.y; 
           
           if (el.type === 'table') {
-            const r = Math.floor((pos.y - el.y) / (el.h / el.rows));
+            const r = Math.floor((lPos.y - el.y) / (el.h / el.rows));
             let c = 0;
             if (el.customCols) {
                 let accumulatedRatio = 0;
-                let relX = (pos.x - el.x) / el.w;
+                let relX = (lPos.x - el.x) / el.w;
                 for (let k = 0; k < el.cols; k++) {
                     accumulatedRatio += el.colRatios[k];
                     if (relX <= accumulatedRatio) { c = k; break; }
                 }
             } else {
-                c = Math.floor((pos.x - el.x) / (el.w / el.cols));
+                c = Math.floor((lPos.x - el.x) / (el.w / el.cols));
             }
             cellClick = {r: Math.min(r, el.rows-1), c: Math.min(c, el.cols-1)};
           }
@@ -1882,8 +2034,10 @@
       const pos = getMousePos(evt);
       
       if (isResizingCol) {
-          const el = state.elements.find(e => e.id === isResizingCol.id);
+          const el = state.pages[state.currentPageIndex].elements.find(e => e.id === isResizingCol.id);
           const c = isResizingCol.col;
+          
+          const lPos = getLocalPos(pos, el);
           
           let prevRatios = 0;
           for(let i=0; i<c-1; i++) prevRatios += el.colRatios[i];
@@ -1891,7 +2045,7 @@
           const minRatio = 20 / el.w; 
           const maxRatio = (el.colRatios[c-1] + el.colRatios[c]) - minRatio;
           
-          let rawNewRatio = ((pos.x - el.x) / el.w) - prevRatios;
+          let rawNewRatio = ((lPos.x - el.x) / el.w) - prevRatios;
           let newRatio = Math.max(minRatio, Math.min(maxRatio, rawNewRatio));
           
           const diff = newRatio - el.colRatios[c-1];
@@ -1903,16 +2057,16 @@
       }
 
       if (!state.selectedId) {
-          // Check hover state for table column resizing cursors even when not selected
           let hoverColSep = false;
-          for (let i = state.elements.length - 1; i >= 0; i--) {
-             const el = state.elements[i];
-             if (el.type === 'table' && el.customCols && pos.y >= el.y && pos.y <= el.y + el.h && pos.x >= el.x && pos.x <= el.x + el.w) {
+          for (let i = state.pages[state.currentPageIndex].elements.length - 1; i >= 0; i--) {
+             const el = state.pages[state.currentPageIndex].elements[i];
+             const lPos = getLocalPos(pos, el);
+             if (el.type === 'table' && el.customCols && lPos.y >= el.y && lPos.y <= el.y + el.h && lPos.x >= el.x && lPos.x <= el.x + el.w) {
                 let currentOffset = 0;
                 for (let c=1; c<el.cols; c++) {
                    currentOffset += el.colRatios[c-1];
                    const lx = el.x + (currentOffset * el.w);
-                   if (Math.abs(pos.x - lx) < 6) { hoverColSep = true; break; }
+                   if (Math.abs(lPos.x - lx) < 6) { hoverColSep = true; break; }
                 }
              }
              if(hoverColSep) break;
@@ -1921,25 +2075,34 @@
           return;
       }
 
-      const el = state.elements.find(e => e.id === state.selectedId);
+      const el = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
       if (!el) return;
 
       const useGrid = document.getElementById('snapGrid').checked;
       const gSize = parseInt(document.getElementById('snapSize').value) || 8;
 
       if (isResizing) {
-        let propW = Math.max(20, pos.x - el.x); 
-        let propH = Math.max(20, pos.y - el.y);
+        const lPos = getLocalPos(pos, el);
+        let propW = Math.max(20, lPos.x - el.x); 
+        let propH = Math.max(20, lPos.y - el.y);
         
         if (useGrid) { 
-          el.w = Math.round(propW / gSize) * gSize; 
-          el.h = Math.round(propH / gSize) * gSize; 
+          propW = Math.round(propW / gSize) * gSize; 
+          propH = Math.round(propH / gSize) * gSize; 
           state.activeGuides = [];
         } else {
           const resizeSnaps = calculateResizeSnaps(el, propW, propH);
-          el.w = resizeSnaps.w;
-          el.h = resizeSnaps.h;
+          propW = resizeSnaps.w;
+          propH = resizeSnaps.h;
         }
+
+        if (el.type === 'image' && el.aspectLocked) {
+            let ratio = el.originalRatio || (el.w / el.h);
+            propH = propW / ratio;
+        }
+
+        el.w = propW;
+        el.h = propH;
         drawCanvas();
       } else if (isDragging) {
         el.x = pos.x - dragOffsetX; el.y = pos.y - dragOffsetY;
@@ -1955,22 +2118,23 @@
         }
         drawCanvas();
       } else {
+        const lPos = getLocalPos(pos, el);
         const hX = el.x + el.w - HANDLE_SIZE, hY = el.y + el.h - HANDLE_SIZE;
         let hoverColSep = false;
         
-        if (el.type === 'table' && el.customCols && pos.y >= el.y && pos.y <= el.y + el.h && pos.x >= el.x && pos.x <= el.x + el.w) {
+        if (el.type === 'table' && el.customCols && lPos.y >= el.y && lPos.y <= el.y + el.h && lPos.x >= el.x && lPos.x <= el.x + el.w) {
             let currentOffset = 0;
             for (let c=1; c<el.cols; c++) {
                currentOffset += el.colRatios[c-1];
                const lx = el.x + (currentOffset * el.w);
-               if (Math.abs(pos.x - lx) < 6) { hoverColSep = true; break; }
+               if (Math.abs(lPos.x - lx) < 6) { hoverColSep = true; break; }
             }
         }
 
         if (hoverColSep) {
             canvas.style.cursor = 'col-resize';
         } else {
-            canvas.style.cursor = (pos.x >= hX && pos.x <= hX + HANDLE_SIZE*2 && pos.y >= hY && pos.y <= hY + HANDLE_SIZE*2) ? 'nwse-resize' : 'crosshair';
+            canvas.style.cursor = (lPos.x >= hX && lPos.x <= hX + HANDLE_SIZE*2 && lPos.y >= hY && lPos.y <= hY + HANDLE_SIZE*2) ? 'nwse-resize' : 'crosshair';
         }
       }
     });
@@ -2156,6 +2320,8 @@
     }
 
     function drawCanvas() {
+      updatePageUI();
+      
       const gFont = document.getElementById('globalFont').value;
       const showMargins = document.getElementById('showMargins').checked;
       const showGrid = document.getElementById('snapGrid').checked;
@@ -2196,7 +2362,16 @@
         }
       }
 
-      state.elements.forEach(el => {
+      state.pages[state.currentPageIndex].elements.forEach(el => {
+        if (el.rotation) {
+            const cx = el.x + el.w / 2;
+            const cy = el.y + el.h / 2;
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(el.rotation * Math.PI / 180);
+            ctx.translate(-cx, -cy);
+        }
+
         ctx.textBaseline = 'top';
         const isBorder = el.showBorder !== false;
 
@@ -2412,6 +2587,10 @@
           ctx.setLineDash([]);
           ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x + el.w - HANDLE_SIZE/2, el.y + el.h - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); ctx.strokeRect(el.x + el.w - HANDLE_SIZE/2, el.y + el.h - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
         }
+
+        if (el.rotation) {
+            ctx.restore();
+        }
       });
 
       if (!state.isExporting && state.activeGuides.length > 0) {
@@ -2433,23 +2612,42 @@
     // --- PDF Export Logic ---
     function downloadPDF() {
       if (!window.jspdf) { alert("PDF library is loading, please try again in a moment."); return; }
-      const curr = state.selectedId; selectElement(null); 
-      state.isExporting = true; drawCanvas();
+      
+      const originalSelectedId = state.selectedId; 
+      const originalPageIndex = state.currentPageIndex;
+      selectElement(null); 
+      state.isExporting = true;
       
       const { jsPDF } = window.jspdf;
       const orientation = state.paper.widthInches > state.paper.heightInches ? 'l' : 'p';
+      const pdfW = Math.max(8.5, state.paper.widthInches);
+      const pdfH = Math.max(11, state.paper.heightInches);
+      
       const doc = new jsPDF({
           orientation: orientation,
           unit: 'in',
-          format: [Math.max(8.5, state.paper.widthInches), Math.max(11, state.paper.heightInches)]
+          format: [pdfW, pdfH]
       });
       
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      doc.addImage(imgData, 'PNG', 0, 0, Math.max(8.5, state.paper.widthInches), Math.max(11, state.paper.heightInches));
+      for (let i = 0; i < state.pages.length; i++) {
+          state.currentPageIndex = i;
+          drawCanvas(); // Render current page synchronously
+          
+          const imgData = canvas.toDataURL('image/png', 1.0);
+          
+          if (i > 0) {
+              doc.addPage([pdfW, pdfH], orientation);
+          }
+          
+          doc.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+      }
+      
       doc.save(`Notes_${getTimestamp()}.pdf`);
       
+      state.currentPageIndex = originalPageIndex;
       state.isExporting = false; 
-      selectElement(curr); drawCanvas();
+      selectElement(originalSelectedId); 
+      drawCanvas();
     }
 
     // --- Native App Launch & Double-Click Handler ---
