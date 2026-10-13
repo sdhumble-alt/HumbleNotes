@@ -180,7 +180,7 @@
         <button class="btn btn-hdr" id="btnUndo" onclick="undo()" disabled title="Undo"><i class="ti ti-arrow-back-up"></i></button>
         <button class="btn btn-hdr" id="btnRedo" onclick="redo()" disabled title="Redo"><i class="ti ti-arrow-forward-up"></i></button>
         
-        <div class="toolbar-ver">V 2.0.0 &mdash; 2026-10-12</div>
+        <div class="toolbar-ver">V 2.0.1 &mdash; 2026-10-12</div>
       </div>
     </header>
 
@@ -854,12 +854,36 @@
       }
     }
 
-    function saveProject() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(historyStack[historyIndex]);
-      const a = document.createElement('a');
-      a.setAttribute("href", dataStr);
-      a.setAttribute("download", `NoteBuilder_${getTimestamp()}.humblenote`);
-      document.body.appendChild(a); a.click(); a.remove();
+    async function saveProject() {
+      const content = historyStack[historyIndex];
+      const defaultName = `NoteBuilder_${getTimestamp()}.humblenote`;
+
+      if (window.showSaveFilePicker) {
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: defaultName,
+            types: [{
+              description: 'Humble Note File',
+              accept: { 'application/json': ['.humblenote'] },
+            }],
+          });
+          const writable = await fileHandle.createWritable();
+          await writable.write(content);
+          await writable.close();
+        } catch (err) {
+          // Ignore AbortError if the user cancels the dialog
+          if (err.name !== 'AbortError') console.error("Save failed:", err);
+        }
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(content);
+        const a = document.createElement('a');
+        a.setAttribute("href", dataStr);
+        a.setAttribute("download", defaultName);
+        document.body.appendChild(a); 
+        a.click(); 
+        a.remove();
+      }
     }
 
     function openProject(e) {
@@ -2610,7 +2634,7 @@
     function getTimestamp() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
     // --- PDF Export Logic ---
-    function downloadPDF() {
+    async function downloadPDF() {
       if (!window.jspdf) { alert("PDF library is loading, please try again in a moment."); return; }
       
       const originalSelectedId = state.selectedId; 
@@ -2642,12 +2666,34 @@
           doc.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
       }
       
-      doc.save(`Notes_${getTimestamp()}.pdf`);
-      
+      // Restore state before handling the save dialog
       state.currentPageIndex = originalPageIndex;
       state.isExporting = false; 
       selectElement(originalSelectedId); 
       drawCanvas();
+
+      const defaultName = `Notes_${getTimestamp()}.pdf`;
+
+      if (window.showSaveFilePicker) {
+        try {
+          const pdfBlob = doc.output('blob');
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: defaultName,
+            types: [{
+              description: 'PDF Document',
+              accept: { 'application/pdf': ['.pdf'] },
+            }],
+          });
+          const writable = await fileHandle.createWritable();
+          await writable.write(pdfBlob);
+          await writable.close();
+        } catch (err) {
+          if (err.name !== 'AbortError') console.error("Export failed:", err);
+        }
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker
+        doc.save(defaultName);
+      }
     }
 
     // --- Native App Launch & Double-Click Handler ---
