@@ -185,7 +185,7 @@
         <button class="btn btn-hdr" id="btnUndo" onclick="undo()" disabled title="Undo (Ctrl/Cmd+Z)"><i class="ti ti-arrow-back-up"></i></button>
         <button class="btn btn-hdr" id="btnRedo" onclick="redo()" disabled title="Redo (Ctrl/Cmd+Shift+Z)"><i class="ti ti-arrow-forward-up"></i></button>
         
-        <div class="toolbar-ver">V 2.1.0 &mdash; 2026-10-18</div>
+        <div class="toolbar-ver">V 2.2.0 &mdash; 2026-10-19</div>
       </div>
     </header>
 
@@ -305,6 +305,10 @@
                 <div class="toggle-row" style="margin-bottom: 6px;">
                   <input type="checkbox" id="propCustomCols" onchange="updateSelectedElement(); pushHistory();">
                   <label for="propCustomCols" style="font-weight: 600; color: #475569;">Custom Column Widths</label>
+                </div>
+                <div class="toggle-row" style="margin-bottom: 6px;">
+                  <input type="checkbox" id="propAutoFitRowHeight" onchange="updateSelectedElement(); pushHistory();">
+                  <label for="propAutoFitRowHeight" style="font-weight: 600; color: #475569;">Auto-Adjust Row Height to Content</label>
                 </div>
                 <hr style="border:0; border-top:1px solid var(--card-border); margin: 10px 0;">
               </div>
@@ -694,8 +698,6 @@
     let clipboardData = null; // Array of copied elements
 
     // --- Image Store ---
-    // Image data lives here (keyed by imageId) instead of on the elements, so undo
-    // snapshots stay small and images survive undo/redo, saving and reopening.
     const imageStore = {};  // imageId -> data URL
     const imageCache = {};  // imageId -> loaded HTMLImageElement
 
@@ -721,7 +723,6 @@
       return { pages: state.pages, currentPageIndex: state.currentPageIndex, paper: state.paper, orientation: state.orientation, font: state.globalFont };
     }
 
-    // Full file contents: document + per-file settings + referenced images
     function serializeForFile() {
       const data = getDocData();
       data.snapSize = state.snapSize;
@@ -732,11 +733,10 @@
       return JSON.stringify(data);
     }
 
-    // Removes scripts, event handlers and unknown tags from rich text loaded from files/links
     const SAFE_TAGS = ['b', 'strong', 'i', 'em', 'u', 's', 'strike', 'sup', 'sub', 'br', 'div', 'p', 'span'];
     function sanitizeRichText(html) {
       if (!html || typeof html !== 'string') return '';
-      const tpl = document.createElement('template'); // inert: nothing inside runs or loads
+      const tpl = document.createElement('template');
       tpl.innerHTML = html;
       const clean = (node) => {
         Array.from(node.childNodes).forEach(child => {
@@ -758,7 +758,6 @@
       return tpl.innerHTML;
     }
 
-    // Validates and cleans a document that came from outside (file, link, autosave)
     function prepareExternalDoc(snapStr) {
       const snap = JSON.parse(snapStr);
       if (!snap || typeof snap !== 'object') throw new Error('Not a Humble Note file');
@@ -777,10 +776,12 @@
         if (!page.id) page.id = generateId();
         page.elements.forEach(el => {
           if (typeof el.text === 'string') el.text = sanitizeRichText(el.text);
-          if (el.type === 'table' && Array.isArray(el.cells)) {
-            el.cells.forEach(row => row.forEach(cell => { if (cell && typeof cell.text === 'string') cell.text = sanitizeRichText(cell.text); }));
+          if (el.type === 'table') {
+            if (Array.isArray(el.cells)) {
+              el.cells.forEach(row => row.forEach(cell => { if (cell && typeof cell.text === 'string') cell.text = sanitizeRichText(cell.text); }));
+            }
+            if (el.autoFitRowHeight === undefined) el.autoFitRowHeight = false;
           }
-          // Older files stored the image as a data URL string on the element
           if (el.type === 'image' && !el.imageId && typeof el.img === 'string' && el.img.startsWith('data:image/')) el.imageId = storeImage(el.img);
           delete el.img;
         });
@@ -816,8 +817,6 @@
     }
 
     // --- Sheet Size ---
-    // The canvas is always at least a full Letter sheet (portrait or landscape) so smaller
-    // notebook pages print with cutting guides. Returns sizes in logical pixels.
     function getSheetSize() {
       const W = state.paper.widthInches, H = state.paper.heightInches;
       const landscape = W > H;
@@ -827,7 +826,6 @@
       };
     }
 
-    // --- Core Scale Fix for Retina/High-DPI Displays ---
     function resizeCanvas() {
       const sheet = getSheetSize();
       const dpr = window.devicePixelRatio || 1;
@@ -863,7 +861,6 @@
       lastPaperSettings = { size: paperVal, orient: state.orientation, customW: short, customH: long };
     }
 
-    // Applies a snapshot (from history, or one already passed through prepareExternalDoc)
     function restoreState(snapOrStr, fileSettings = false) {
       const snap = (typeof snapOrStr === 'string') ? JSON.parse(snapOrStr) : snapOrStr;
 
@@ -876,14 +873,17 @@
       document.getElementById('globalFont').value = state.globalFont;
       syncPaperControls();
 
-      // Per-file settings only come from files, not from undo/redo
       if (fileSettings) setSnapSize(snap.snapSize !== undefined ? snap.snapSize : DEFAULT_SNAP_SIZE, false);
 
       state.pages.forEach(page => {
           page.elements.forEach(el => {
-            if (el.type === 'table' && !el.cells) {
-               el.cells = buildCells(null, el.rows, el.cols);
-               el.cells[0][0].text = el.text || "";
+            if (el.type === 'table') {
+              if (!el.cells) {
+                 el.cells = buildCells(null, el.rows, el.cols);
+                 el.cells[0][0].text = el.text || "";
+              }
+              if (el.rowHeights && el.rowHeights.length !== el.rows) el.rowHeights = null;
+              if (el.autoFitRowHeight === undefined) el.autoFitRowHeight = false;
             }
             if (el.type === 'box') {
                if (!el.lineSize) el.lineSize = getDefaultLineSize();
@@ -903,9 +903,8 @@
       applyZoom(); drawCanvas(); updateHistoryButtons();
     }
 
-    // Loads a document from a file, link or autosave, replacing the current one
     function loadExternalDoc(snapStr) {
-      const snap = prepareExternalDoc(snapStr); // throws before anything changes if invalid
+      const snap = prepareExternalDoc(snapStr);
       state.selectedIds = []; state.selectedId = null;
       restoreState(snap, true);
       resetHistory();
@@ -1004,7 +1003,6 @@
       }
     }
 
-    // --- Unsaved Changes Tracking ---
     let lastSavedContent = null;
     function hasUnsavedChanges() {
       const hasContent = state.pages.some(p => p.elements.length > 0);
@@ -1015,7 +1013,6 @@
       if (hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; }
     });
 
-    // --- Autosave (IndexedDB, survives refreshes and closed tabs) ---
     const AUTOSAVE_DB = 'humbleNoteAutosave';
     let autosaveTimer = null;
     function openAutosaveDB() {
@@ -1058,7 +1055,7 @@
     }
 
     async function saveProject() {
-      if (document.activeElement && document.activeElement.id === 'propText') pushHistory(); // capture in-progress typing
+      if (document.activeElement && document.activeElement.id === 'propText') pushHistory();
       const content = serializeForFile();
       const defaultName = `NoteBuilder_${getTimestamp()}.humblenote`;
 
@@ -1077,11 +1074,9 @@
           lastSavedContent = content;
           showToast('Saved.');
         } catch (err) {
-          // Ignore AbortError if the user cancels the dialog
           if (err.name !== 'AbortError') { console.error("Save failed:", err); alert("Save failed: " + err.message); }
         }
       } else {
-        // Fallback for browsers that don't support showSaveFilePicker
         const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
         const a = document.createElement('a');
         a.setAttribute("href", url);
@@ -1115,6 +1110,7 @@
     let isDragging = false; let isResizing = false;
     let dragOffsetX = 0; let dragOffsetY = 0;
     let isResizingCol = null;
+    let isResizingRow = null; // { id, row }
     const HANDLE_SIZE = 12;
 
     function defaultFormat() { return { size: 12, align: 'left', valign: 'top' }; }
@@ -1226,7 +1222,6 @@
       if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(state.zoom + (e.deltaY > 0 ? -0.1 : 0.1)); }
     }, { passive: false });
 
-    // Click outside canvas to deselect
     viewport.addEventListener('pointerdown', function(evt) {
         if (evt.target === viewport || evt.target.classList.contains('canvas-inner-wrapper')) {
             if (state.selectedId) {
@@ -1240,7 +1235,6 @@
     let pendingTemplateType = null;
     let editingTemplateId = null;
     
-    // Globally attached to window for inline onclick handler mapping
     window.renderBraceInputs = function(majorCount, existingSubparts = null) {
        const count = parseInt(majorCount) || 1;
        let html = `<div class="field-row"><label>Number of Major Parts</label><input type="number" id="cfgVal1" value="${count}" min="1" max="8" onchange="renderBraceInputs(this.value)"></div>`;
@@ -1360,10 +1354,9 @@
     }
 
     function cloneElementData(el) {
-       return JSON.parse(JSON.stringify(el)); // images are shared by imageId, so a plain copy is enough
+       return JSON.parse(JSON.stringify(el));
     }
 
-    // Element that anchors each dynamic organizer's position when its structure is edited
     const TEMPLATE_ANCHOR_ROLE = { 'bubble': 'center', 'double-bubble': 'mainL', 'flow': 'step-0', 'storyboard': 'draw-0-0', 'cycle': 'stage-0', 'tree': 'top', 'brace': 'whole' };
     const TEMPLATE_KEPT_FIELDS = ['text', 'label', 'labelAlign', 'format', 'bgStyle', 'lineSize', 'gridSize', 'showBorder', 'borderStyle', 'borderWidth'];
 
@@ -1374,11 +1367,10 @@
 
       const m = 0.25 * DPI; 
       
-      // Dynamic margin check to start templates BELOW any placed page titles/numbers
       let mTop = m;
       const headerEls = state.pages[state.currentPageIndex].elements.filter(e => e.y < m + 50); 
       if (headerEls.length > 0) {
-         mTop = Math.max(...headerEls.map(e => e.y + e.h)) + 15; // 15px gap below titles
+         mTop = Math.max(...headerEls.map(e => e.y + e.h)) + 15;
       }
 
       const safeW = (state.paper.widthInches * DPI) - (m*2);
@@ -1386,7 +1378,6 @@
       const lSz = getDefaultLineSize();
       const gSz = getDefaultGridSize();
 
-      // Advanced Auto-Flipping Smart Connector
       const addConnector = (x1, y1, x2, y2, aType = 'none') => {
          const minX = Math.min(x1, x2); const minY = Math.min(y1, y2);
          const w = Math.max(20, Math.abs(x2 - x1)); const h = Math.max(20, Math.abs(y2 - y1));
@@ -1632,11 +1623,9 @@
         state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: cX - exW/2, y: mTop + safeH - bH*1.5, w: exW, h: bH*1.5, label: 'Synthesis / Summary', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
       }
 
-      // Final processing: tag elements to this template group
       const newEls = state.pages[state.currentPageIndex].elements.slice(startIndex);
       newEls.forEach(el => { el.templateId = tId; el.templateType = type; el.templateCfg = cfg; });
 
-      // When editing an existing organizer, carry over its content, styling and position
       if (oldEls.length > 0) {
          const oldByRole = {};
          oldEls.forEach(e => { if (e.role) oldByRole[e.role] = e; });
@@ -1646,7 +1635,7 @@
 
          newEls.forEach(el => {
             if (el.type === 'line') return;
-            const old = hasRoles ? oldByRole[el.role] : oldShapes[shapeIndex++]; // older files have no roles
+            const old = hasRoles ? oldByRole[el.role] : oldShapes[shapeIndex++];
             if (!old) return;
             TEMPLATE_KEPT_FIELDS.forEach(f => { if (old[f] !== undefined) el[f] = JSON.parse(JSON.stringify(old[f])); });
          });
@@ -1673,6 +1662,8 @@
         el.w = 300; el.h = 150; el.rows = 3; el.cols = 3; 
         el.customCols = false;
         el.colRatios = [0.333, 0.333, 0.334];
+        el.rowHeights = [50, 50, 50];
+        el.autoFitRowHeight = false;
         el.format.align = 'center'; el.format.valign = 'middle';
         el.cells = buildCells(null, 3, 3); 
         for(let c=0; c<3; c++) { el.cells[0][c].text = "<b>Header</b>"; }
@@ -1684,14 +1675,14 @@
       const type = document.querySelector('input[name="ptType"]:checked').value;
       const align = document.querySelector('input[name="ptAlign"]:checked').value;
       
-      const m = 0.25 * DPI; // Safe margin
+      const m = 0.25 * DPI;
       const pageW = state.paper.widthInches * DPI;
       
-      const pnW = 0.75 * DPI; // 0.75" wide (Wide enough for "Pg. " and 3 digits)
-      const pnH = 30;         // Just high enough for one line
-      const tH = 30;          // Just high enough for one line
+      const pnW = 0.75 * DPI;
+      const pnH = 30;
+      const tH = 30;
       
-      const y = m; // Top of the page
+      const y = m;
       
       let pFormat = defaultFormat(); 
       pFormat.size = 10; pFormat.bold = true; pFormat.align = 'center'; pFormat.valign = 'middle';
@@ -1706,13 +1697,13 @@
         state.pages[state.currentPageIndex].elements.push(el);
         selectElement(el.id);
       } else if (type === 'title') {
-        const tW = pageW - (2 * m); // Take up remaining width to both borders
+        const tW = pageW - (2 * m);
         const x = m; 
         const el = { id: generateId(), type: 'box', x: x, y: y, w: tW, h: tH, text: "Title", label: "", bgStyle: "none", showBorder: false, borderWidth: 1, borderStyle: 'solid', format: tFormat };
         state.pages[state.currentPageIndex].elements.push(el);
         selectElement(el.id);
       } else if (type === 'both') {
-        const tW = pageW - (2 * m) - pnW; // Remaining width after page number
+        const tW = pageW - (2 * m) - pnW;
         let pnX, tX;
         
         if (align === 'left') {
@@ -1742,7 +1733,6 @@
       reader.onload = function(event) {
         const img = new Image();
         img.onload = function() {
-          // Very large photos are scaled down (still well above 300 DPI at page size) to keep files small
           const MAX_SIDE = 2400;
           const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
           const cvs = document.createElement('canvas');
@@ -1875,7 +1865,6 @@
       }
     });
 
-    // Rich text pasted from Word/web pages comes in as plain text
     document.getElementById('propText').addEventListener('paste', function(e) {
       e.preventDefault();
       const text = (e.clipboardData || window.clipboardData).getData('text/plain');
@@ -1903,7 +1892,6 @@
         const el = cloneElementData(src);
         el.id = generateId();
         el.x += 20; el.y += 20;
-        // A copy is a stand-alone element, not part of the original organizer
         delete el.templateId; delete el.templateType; delete el.templateCfg; delete el.role;
         state.pages[state.currentPageIndex].elements.push(el);
         return el;
@@ -1923,7 +1911,6 @@
       const tag = active ? active.tagName.toLowerCase() : '';
       const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || (active && active.isContentEditable);
 
-      // Save works everywhere, even while typing
       if (cmdCtrl && key === 's') { e.preventDefault(); saveProject(); return; }
 
       if (e.key === 'Escape') {
@@ -1958,7 +1945,7 @@
       if (cmdCtrl && key === 'v') {
         if (clipboardData) {
           pasteElements(clipboardData);
-          clipboardData.forEach(el => { el.x += 20; el.y += 20; }); // next paste steps further down
+          clipboardData.forEach(el => { el.x += 20; el.y += 20; });
         }
         return;
       }
@@ -1975,7 +1962,6 @@
       }
     });
 
-    // One undo step per arrow-key nudge, not per repeated keypress
     document.addEventListener('keyup', function(e) {
       if (nudgePending && e.key.startsWith('Arrow')) { nudgePending = false; pushHistory(); }
     });
@@ -1999,8 +1985,6 @@
       } else { el.text = val; }
     }
 
-    // Selects one element (or a group, when groupIds is given). The primary element
-    // `id` is the one shown in the properties panel.
     function selectElement(id, groupIds = null) {
       const isNewSelection = id !== state.selectedId;
       state.selectedId = id;
@@ -2083,6 +2067,7 @@
         document.getElementById('propRows').value = el.rows || 3;
         document.getElementById('propCols').value = el.cols || 3;
         document.getElementById('propCustomCols').checked = el.customCols === true;
+        document.getElementById('propAutoFitRowHeight').checked = el.autoFitRowHeight === true;
         document.getElementById('activeCellLabel').innerText = `Cell R${state.selectedCell.r + 1}:C${state.selectedCell.c + 1}`;
       } else if (el.type === 'line') {
         lineP.classList.remove('hidden');
@@ -2114,7 +2099,6 @@
       }
     }
 
-    // Line/grid spacing inputs: keep within a safe range and remember as the default
     function setPatternSize(kind, input) {
       const size = Math.round(clampNum(input.value, 5, 200, kind === 'line' ? getDefaultLineSize() : getDefaultGridSize()));
       input.value = size;
@@ -2160,6 +2144,7 @@
         const newRows = Math.max(1, parseInt(document.getElementById('propRows').value) || 1);
         const newCols = Math.max(1, parseInt(document.getElementById('propCols').value) || 1);
         const useCustomCols = document.getElementById('propCustomCols').checked;
+        el.autoFitRowHeight = document.getElementById('propAutoFitRowHeight').checked;
         
         if (useCustomCols !== el.customCols) {
             el.customCols = useCustomCols;
@@ -2174,6 +2159,7 @@
            if (el.customCols) {
                el.colRatios = Array(newCols).fill(1 / newCols);
            }
+           el.rowHeights = Array(newRows).fill(el.h / newRows);
            state.selectedCell.r = Math.min(state.selectedCell.r, el.rows - 1);
            state.selectedCell.c = Math.min(state.selectedCell.c, el.cols - 1);
            document.getElementById('activeCellLabel').innerText = `Cell R${state.selectedCell.r + 1}:C${state.selectedCell.c + 1}`;
@@ -2198,7 +2184,7 @@
       let v = val;
       if (type === 'size') {
         v = Math.round(clampNum(val, 6, 96, NaN));
-        if (isNaN(v)) { refreshPropPanel(); return; } // blank or invalid: put the old size back
+        if (isNaN(v)) { refreshPropPanel(); return; }
       }
 
       if (el.type === 'table') {
@@ -2233,7 +2219,6 @@
       };
     }
     
-    // Maps a global mouse coordinate into an element's local un-rotated coordinate space
     function getLocalPos(pos, el) {
         if (!el.rotation) return pos;
         const cx = el.x + el.w / 2;
@@ -2320,14 +2305,53 @@
       return { w: Math.max(20, snapW), h: Math.max(20, snapH) };
     }
 
-    // Finds a custom-width table column divider under the pointer
+    // Helper: Compute runtime row heights and Y coordinates (handles custom row heights & auto-adjustment)
+    function getTableRowMetrics(el, gFont) {
+      let baseHeights = [];
+      if (Array.isArray(el.rowHeights) && el.rowHeights.length === el.rows) {
+        baseHeights = [...el.rowHeights];
+      } else {
+        const defaultH = el.h / el.rows;
+        baseHeights = Array(el.rows).fill(defaultH);
+      }
+
+      if (el.autoFitRowHeight) {
+        for (let r = 0; r < el.rows; r++) {
+          let reqH = 20; // Minimum row baseline
+          let currentCOffset = 0;
+          for (let c = 0; c < el.cols; c++) {
+            const ratio = el.customCols && el.colRatios ? el.colRatios[c] : (1 / el.cols);
+            const cW = ratio * el.w;
+            const cell = el.cells[r][c];
+            if (cell && cell.text) {
+              const mergedFormat = cell.format ? { ...el.format, ...cell.format } : el.format;
+              const contentH = computeRichTextHeight(mainCtx, cell.text, Math.max(10, cW - 10), mergedFormat, gFont);
+              if (contentH + 12 > reqH) reqH = contentH + 12;
+            }
+            currentCOffset += ratio;
+          }
+          baseHeights[r] = Math.max(baseHeights[r], reqH);
+        }
+      }
+
+      const rowY = [];
+      let accY = 0;
+      for (let r = 0; r < el.rows; r++) {
+        rowY.push(accY);
+        accY += baseHeights[r];
+      }
+      return { heights: baseHeights, rowY: rowY, totalHeight: accY };
+    }
+
     function findColSeparator(pos) {
       const els = state.pages[state.currentPageIndex].elements;
+      const gFont = state.globalFont;
       for (let i = els.length - 1; i >= 0; i--) {
          const el = els[i];
          if (el.type !== 'table' || !el.customCols) continue;
          const lPos = getLocalPos(pos, el);
-         if (lPos.y >= el.y && lPos.y <= el.y + el.h && lPos.x >= el.x && lPos.x <= el.x + el.w) {
+         const { totalHeight } = getTableRowMetrics(el, gFont);
+         if (lPos.y >= el.y && lPos.y <= el.y + totalHeight && lPos.x >= el.x && lPos.x <= el.x + el.w) {
             let currentOffset = 0;
             for (let c=1; c<el.cols; c++) {
                currentOffset += el.colRatios[c-1];
@@ -2339,16 +2363,50 @@
       return null;
     }
 
-    // Topmost element under the pointer (and the table cell, for tables)
+    function findRowSeparator(pos) {
+      const els = state.pages[state.currentPageIndex].elements;
+      const gFont = state.globalFont;
+      for (let i = els.length - 1; i >= 0; i--) {
+         const el = els[i];
+         if (el.type !== 'table') continue;
+         const lPos = getLocalPos(pos, el);
+         if (lPos.x >= el.x && lPos.x <= el.x + el.w) {
+            const { rowY, totalHeight } = getTableRowMetrics(el, gFont);
+            if (lPos.y >= el.y && lPos.y <= el.y + totalHeight) {
+              for (let r = 1; r < el.rows; r++) {
+                 const ly = el.y + rowY[r];
+                 if (Math.abs(lPos.y - ly) < 6) return { id: el.id, row: r };
+              }
+            }
+         }
+      }
+      return null;
+    }
+
     function hitTest(pos) {
       const els = state.pages[state.currentPageIndex].elements;
+      const gFont = state.globalFont;
       for (let i = els.length - 1; i >= 0; i--) {
         const el = els[i];
         const lPos = getLocalPos(pos, el);
-        if (lPos.x >= el.x && lPos.x <= el.x + el.w && lPos.y >= el.y && lPos.y <= el.y + el.h) {
+        let actualH = el.h;
+        let rowMetrics = null;
+        if (el.type === 'table') {
+          rowMetrics = getTableRowMetrics(el, gFont);
+          actualH = rowMetrics.totalHeight;
+        }
+
+        if (lPos.x >= el.x && lPos.x <= el.x + el.w && lPos.y >= el.y && lPos.y <= el.y + actualH) {
           let cell = null;
           if (el.type === 'table') {
-            const r = Math.floor((lPos.y - el.y) / (el.h / el.rows));
+            const relY = lPos.y - el.y;
+            let r = el.rows - 1;
+            for (let ri = 0; ri < el.rows; ri++) {
+              const startY = rowMetrics.rowY[ri];
+              const h = rowMetrics.heights[ri];
+              if (relY >= startY && relY <= startY + h) { r = ri; break; }
+            }
+
             let c = el.cols - 1;
             if (el.customCols) {
                 let accumulatedRatio = 0;
@@ -2369,21 +2427,36 @@
     }
 
     function isOnResizeHandle(pos, el, pointerType) {
-      const reach = pointerType === 'mouse' ? HANDLE_SIZE * 1.5 : HANDLE_SIZE * 2.5; // bigger target for fingers
+      const reach = pointerType === 'mouse' ? HANDLE_SIZE * 1.5 : HANDLE_SIZE * 2.5;
       const lPos = getLocalPos(pos, el);
-      const cornerX = el.x + el.w, cornerY = el.y + el.h;
+      let effH = el.h;
+      if (el.type === 'table') {
+        const metrics = getTableRowMetrics(el, state.globalFont);
+        effH = metrics.totalHeight;
+      }
+      const cornerX = el.x + el.w, cornerY = el.y + effH;
       return Math.abs(lPos.x - cornerX) <= reach && Math.abs(lPos.y - cornerY) <= reach;
     }
 
-    let dragStart = null; // { x, y, origins: { id: {x, y} } }
-    let panStart = null;  // finger/pen panning of the page when touching empty space
+    let dragStart = null;
+    let panStart = null;
 
-    // Pointer events cover mouse, touch screens and styluses. Pointer capture keeps a drag
-    // going even if the pointer leaves the canvas.
     canvas.addEventListener('pointerdown', function(evt) {
       if (evt.pointerType === 'mouse' && evt.button !== 0) return;
       const pos = getMousePos(evt);
       isDragging = false; isResizing = false; dragStart = null; panStart = null;
+
+      const rowSep = findRowSeparator(pos);
+      if (rowSep) {
+          isResizingRow = rowSep;
+          const el = state.pages[state.currentPageIndex].elements.find(e => e.id === rowSep.id);
+          if (el && (!el.rowHeights || el.rowHeights.length !== el.rows)) {
+             el.rowHeights = Array(el.rows).fill(el.h / el.rows);
+          }
+          selectElement(el.id);
+          canvas.setPointerCapture(evt.pointerId);
+          return;
+      }
 
       const colSep = findColSeparator(pos);
       if (colSep) {
@@ -2418,7 +2491,6 @@
 
       if (evt.shiftKey) {
         if (state.selectedIds.includes(el.id)) {
-          // Shift+click on a selected element removes it from the selection
           const remaining = state.selectedIds.filter(id => id !== el.id);
           const primary = (el.id === state.selectedId) ? (remaining[remaining.length - 1] || null) : state.selectedId;
           selectElement(primary, remaining);
@@ -2429,8 +2501,6 @@
       } else if (!state.selectedIds.includes(el.id)) {
         selectElement(el.id);
       } else {
-        // Clicking an element that's already selected keeps the group (so it can be dragged);
-        // a plain click without dragging narrows the selection to just this element.
         selectElement(el.id, state.selectedIds);
       }
 
@@ -2447,6 +2517,28 @@
       if (panStart) {
           viewport.scrollLeft = panStart.left - (evt.clientX - panStart.x);
           viewport.scrollTop = panStart.top - (evt.clientY - panStart.y);
+          return;
+      }
+
+      if (isResizingRow) {
+          const el = state.pages[state.currentPageIndex].elements.find(e => e.id === isResizingRow.id);
+          if (!el) return;
+          const r = isResizingRow.row;
+          const lPos = getLocalPos(pos, el);
+
+          const { rowY } = getTableRowMetrics(el, state.globalFont);
+          const prevY = rowY[r-1];
+          const nextY = (r < el.rows - 1) ? rowY[r+1] : el.h;
+          const combinedHeight = el.rowHeights[r-1] + el.rowHeights[r];
+
+          const minRowH = 15;
+          let newPrevH = Math.max(minRowH, Math.min(combinedHeight - minRowH, lPos.y - (el.y + prevY)));
+          let diff = newPrevH - el.rowHeights[r-1];
+
+          el.rowHeights[r-1] = newPrevH;
+          el.rowHeights[r] -= diff;
+
+          drawCanvas();
           return;
       }
 
@@ -2498,6 +2590,11 @@
             propH = propW / ratio;
         }
 
+        if (el.type === 'table' && el.rowHeights) {
+            const scaleY = propH / el.h;
+            el.rowHeights = el.rowHeights.map(rh => Math.max(15, rh * scaleY));
+        }
+
         el.w = propW;
         el.h = propH;
         drawCanvas();
@@ -2517,7 +2614,6 @@
           if (snaps.y !== null) el.y = snaps.y;
         }
 
-        // Move the rest of the selection by the same amount
         const dx = el.x - origin.x, dy = el.y - origin.y;
         getSelectedEls().forEach(other => {
           if (other.id === el.id || !dragStart.origins[other.id]) return;
@@ -2526,9 +2622,9 @@
         });
         drawCanvas();
       } else if (!isDragging && !isResizing) {
-        // Hover cursor feedback
         let cursor = 'crosshair';
-        if (findColSeparator(pos)) cursor = 'col-resize';
+        if (findRowSeparator(pos)) cursor = 'row-resize';
+        else if (findColSeparator(pos)) cursor = 'col-resize';
         else if (el && isOnResizeHandle(pos, el, evt.pointerType)) cursor = 'nwse-resize';
         else if (hitTest(pos)) cursor = 'move';
         canvas.style.cursor = cursor;
@@ -2537,8 +2633,8 @@
 
     function endPointerAction() {
       if (dragStart && dragStart.collapseTo && !dragStart.moved) selectElement(dragStart.collapseTo);
-      if (isDragging || isResizing || isResizingCol) pushHistory();
-      isDragging = false; isResizing = false; isResizingCol = null; dragStart = null; panStart = null;
+      if (isDragging || isResizing || isResizingCol || isResizingRow) pushHistory();
+      isDragging = false; isResizing = false; isResizingCol = null; isResizingRow = null; dragStart = null; panStart = null;
       state.activeGuides = []; drawCanvas();
     }
     canvas.addEventListener('pointerup', endPointerAction);
@@ -2547,7 +2643,7 @@
     // --- AST Rich Text Engine ---
     function parseHTMLToSegments(html) {
       if (!html) return [];
-      const tpl = document.createElement('template'); // inert: markup inside never runs or loads
+      const tpl = document.createElement('template');
       
       let cleanHtml = html.replace(/<div[^>]*><br><\/div>/gi, '\n');
       cleanHtml = cleanHtml.replace(/<div[^>]*>/gi, '\n');
@@ -2632,9 +2728,8 @@
 
                   applyFont(seg.format);
                   const wWidth = ctx.measureText(word).width;
-                  const maxW = maxWidth - currentLine.indent;
+                  const maxW = Math.max(10, maxWidth - currentLine.indent);
 
-                  // A single word wider than the box gets split across lines
                   if (word !== ' ' && wWidth > maxW && word.length > 1) {
                       let cut = 1;
                       while (cut < word.length - 1 && ctx.measureText(word.slice(0, cut + 1)).width <= maxW) cut++;
@@ -2665,7 +2760,17 @@
       return lines;
     }
 
-    // Returns true when the text is taller than the space available
+    // Measure total rendered height of rich text without drawing
+    function computeRichTextHeight(ctx, html, w, elFormat, gFont) {
+        if (!html) return 0;
+        const segments = parseHTMLToSegments(html);
+        if (!segments.length) return 0;
+        const baseSize = clampNum(elFormat.size, 6, 96, 12);
+        const lineHeight = baseSize * 1.3;
+        const lines = buildRichLines(ctx, segments, w, baseSize, gFont);
+        return lines.length * lineHeight;
+    }
+
     function drawRichTextEngine(ctx, html, startX, startY, w, availH, elFormat, gFont) {
         if (!html) return false;
         const segments = parseHTMLToSegments(html);
@@ -2728,7 +2833,6 @@
         return hasVisibleText && totalH > availH + 1;
     }
 
-    // Red on-screen warning (never exported) when text doesn't fit inside its element
     function drawOverflowWarning(ctx, x, y, w, h) {
       if (state.isExporting) return;
       ctx.save();
@@ -2743,7 +2847,6 @@
       ctx.restore();
     }
 
-    // Draws the current page. Pass a context to draw somewhere else (used for high-resolution PDF export).
     function drawCanvas(targetCtx) {
       const ctx = targetCtx || mainCtx;
       updatePageUI();
@@ -2821,7 +2924,7 @@
             ctx.beginPath();
 
             const rawStep = (el.bgStyle === 'lines') ? (el.lineSize || getDefaultLineSize()) : (el.gridSize || getDefaultGridSize());
-            const step = clampNum(rawStep, 5, 200, 20); // never loop forever on a bad value
+            const step = clampNum(rawStep, 5, 200, 20);
 
             for (let ly = el.y + step; ly < el.y + el.h; ly += step) { ctx.moveTo(el.x, ly); ctx.lineTo(el.x + el.w, ly); }
             if (el.bgStyle === 'grid') { for (let lx = el.x + step; lx < el.x + el.w; lx += step) { ctx.moveTo(lx, el.y); ctx.lineTo(lx, el.y + el.h); } }
@@ -2912,7 +3015,6 @@
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // Arrowhead rendering function
           const drawArrow = (fromX, fromY, toX, toY) => {
             const angle = Math.atan2(toY - fromY, toX - fromX);
             const headlen = 12;
@@ -2928,35 +3030,39 @@
           if (el.arrowType === 'both') drawArrow(x2, y2, x1, y1);
         }
         else if (el.type === 'table') {
-          ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x, el.y, el.w, el.h);
+          const { heights, rowY, totalHeight } = getTableRowMetrics(el, gFont);
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x, el.y, el.w, totalHeight);
           ctx.strokeStyle = '#1e2a3a'; ctx.lineWidth = el.borderWidth || 2;
           applyStyle();
           ctx.beginPath();
 
-          const rH = el.h / el.rows;
           // Draw horizontal lines
-          for(let i=1; i<el.rows; i++) { ctx.moveTo(el.x, el.y + i*rH); ctx.lineTo(el.x + el.w, el.y + i*rH); }
+          for(let i=1; i<el.rows; i++) {
+             const ly = el.y + rowY[i];
+             ctx.moveTo(el.x, ly); ctx.lineTo(el.x + el.w, ly);
+          }
 
           // Draw vertical lines dynamically based on ratio settings
           let currentWOffset = 0;
           for(let i=1; i<el.cols; i++) {
              currentWOffset += el.customCols && el.colRatios ? el.colRatios[i-1] : (1 / el.cols);
              const lx = el.x + (currentWOffset * el.w);
-             ctx.moveTo(lx, el.y); ctx.lineTo(lx, el.y + el.h);
+             ctx.moveTo(lx, el.y); ctx.lineTo(lx, el.y + totalHeight);
           }
 
           ctx.stroke();
-          if (isBorder) ctx.strokeRect(el.x, el.y, el.w, el.h);
+          if (isBorder) ctx.strokeRect(el.x, el.y, el.w, totalHeight);
           ctx.setLineDash([]);
 
           for (let r=0; r<el.rows; r++) {
              let currentCOffset = 0;
+             const rH = heights[r];
+             const cY = el.y + rowY[r];
              for (let c=0; c<el.cols; c++) {
                  const cell = el.cells[r][c];
                  const ratio = el.customCols && el.colRatios ? el.colRatios[c] : (1 / el.cols);
                  const cW = ratio * el.w;
                  const cX = el.x + (currentCOffset * el.w);
-                 const cY = el.y + (r * rH);
 
                  if (el.id === state.selectedId && state.selectedCell && state.selectedCell.r === r && state.selectedCell.c === c && !state.isExporting) {
                     ctx.fillStyle = 'rgba(50, 102, 173, 0.15)';
@@ -2967,7 +3073,7 @@
                     ctx.fillStyle = '#1e2a3a';
                     const mergedFormat = cell.format ? { ...el.format, ...cell.format } : el.format;
                     const overflow = drawRichTextEngine(ctx, cell.text, cX + 5, cY + 5, cW - 10, rH - 10, mergedFormat, gFont);
-                    if (overflow) drawOverflowWarning(ctx, cX, cY, cW, rH);
+                    if (overflow && !el.autoFitRowHeight) drawOverflowWarning(ctx, cX, cY, cW, rH);
                  }
 
                  currentCOffset += ratio;
@@ -2990,7 +3096,6 @@
         }
         else if (el.type === 'image') {
           const img = getImage(el.imageId);
-          // Only draw once loaded; a missing or broken image must not stop the rest of the page from drawing
           if (img && img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, el.x, el.y, el.w, el.h);
           } else if (!state.isExporting) {
@@ -3011,10 +3116,14 @@
           const isPrimary = el.id === state.selectedId;
           ctx.strokeStyle = 'rgba(50, 102, 173, 0.8)'; ctx.lineWidth = 2;
           ctx.setLineDash(isPrimary && state.selectedIds.length > 1 ? [] : [4, 4]);
-          ctx.strokeRect(el.x, el.y, el.w, el.h);
+          let displayH = el.h;
+          if (el.type === 'table') {
+            displayH = getTableRowMetrics(el, gFont).totalHeight;
+          }
+          ctx.strokeRect(el.x, el.y, el.w, displayH);
           ctx.setLineDash([]);
           if (isPrimary) {
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x + el.w - HANDLE_SIZE/2, el.y + el.h - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); ctx.strokeRect(el.x + el.w - HANDLE_SIZE/2, el.y + el.h - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x + el.w - HANDLE_SIZE/2, el.y + displayH - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); ctx.strokeRect(el.x + el.w - HANDLE_SIZE/2, el.y + displayH - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
           }
         }
 
@@ -3049,11 +3158,9 @@
 
       const { jsPDF } = window.jspdf;
       const sheet = getSheetSize();
-      const pdfW = sheet.w / DPI, pdfH = sheet.h / DPI; // inches
+      const pdfW = sheet.w / DPI, pdfH = sheet.h / DPI;
       const orientation = pdfW > pdfH ? 'l' : 'p';
 
-      // Render each page at 300 DPI on an offscreen canvas (capped so very large custom
-      // sizes stay under browser canvas limits)
       const maxPixels = 16000000;
       const scale = Math.min(EXPORT_DPI / DPI, Math.sqrt(maxPixels / (sheet.w * sheet.h)));
       const off = document.createElement('canvas');
@@ -3062,7 +3169,6 @@
       const offCtx = off.getContext('2d');
       offCtx.setTransform(scale, 0, 0, scale, 0, 0);
 
-      // Make sure every image is fully loaded before drawing
       const pending = [];
       state.pages.forEach(p => p.elements.forEach(el => {
         if (el.type === 'image') { const img = getImage(el.imageId); if (img && img.decode) pending.push(img.decode().catch(() => {})); }
@@ -3086,7 +3192,6 @@
         alert("Sorry, the PDF couldn't be created: " + err.message);
         return;
       } finally {
-        // Restore state before handling the save dialog
         state.currentPageIndex = originalPageIndex;
         state.isExporting = false;
         isExportingPDF = false;
@@ -3112,7 +3217,6 @@
           if (err.name !== 'AbortError') console.error("Export failed:", err);
         }
       } else {
-        // Fallback for browsers that don't support showSaveFilePicker
         doc.save(defaultName);
       }
     }
@@ -3143,7 +3247,6 @@
       setZoom(Math.min(1.0, (viewport.clientWidth - 80) / getSheetSize().w));
       if (checkLaunchPayload()) return;
 
-      // Bring back the work from last time, if there was any
       const saved = await readAutosave();
       if (saved) {
         try {
