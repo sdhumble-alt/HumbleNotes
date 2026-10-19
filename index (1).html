@@ -1,0 +1,3165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Humble Note Builder</title>
+  <!-- Sectional Canvas Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='6' fill='%231e2a3a'/%3E%3Crect x='6' y='6' width='20' height='5' rx='1.5' fill='%233266ad'/%3E%3Crect x='6' y='14' width='7' height='12' rx='1.5' fill='%23cbd5e1'/%3E%3Crect x='15' y='14' width='11' height='12' rx='1.5' fill='%23ffffff'/%3E%3C/svg%3E">
+  <!-- Stable Tabler Icons CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+  <!-- jsPDF Library for exact dimension PDF exports -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    /* --- A HUMBLE UNIFIED STYLESHEET START --- */
+    :root {
+      --header-bg: #1e2a3a;
+      --header-border: #12202e;
+      --header-title: #ffffff;
+      --header-sub: rgba(255, 255, 255, 0.65);
+      --header-ver: rgba(255, 255, 255, 0.45);
+      --app-window-bg: #f0f2f5;
+      --app-panel-bg: #ffffff;
+      --stage-bg: #f9fafc;
+      --card-border: #cbd5e1;
+      --card-header-bg: #f8fafc;
+      --card-header-border: #e2e8f0;
+      --card-header-title: #475569;
+      --input-border: #cbd5e1;
+      --input-border-hover: #94a3b8;
+      --input-border-focus: #3266ad;
+      --input-focus-ring: rgba(50, 102, 173, 0.15);
+      --btn-primary-bg: #3266ad;
+      --btn-primary-hover: #185fa5;
+      --btn-secondary-bg: #ffffff;
+      --btn-secondary-border: #cbd5e1;
+      --btn-secondary-hover-bg: #f1f5f9;
+      --btn-secondary-hover-border: #94a3b8;
+      --btn-green-bg: #1a7a3a;
+      --btn-green-hover: #145e2c;
+      --btn-danger-bg: #b00020;
+      --btn-danger-hover: #8e001a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; font-size: 11pt; background: var(--app-window-bg); color: #1e2a3a; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    #app { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; background: var(--app-panel-bg); }
+
+    #app-header { background: var(--header-bg); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; border-bottom: 1px solid var(--header-border); }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-icon { 
+      height: 34px; 
+      width: 34px; 
+      display: block; 
+      border: 1.5px solid #ffffff; 
+      border-radius: 8px; 
+      padding: 1px;
+      box-sizing: border-box;
+    }
+    .header-titles { display: flex; flex-direction: column; gap: 2px; }
+    #app-title { font-family: Georgia, 'Times New Roman', serif; font-size: 16px; font-weight: bold; color: var(--header-title); letter-spacing: 0.01em; line-height: 1.2; }
+    #app-subtitle { font-size: 10px; color: var(--header-sub); font-style: italic; line-height: 1.2; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .toolbar-ver { font-size: 8pt; color: var(--header-ver); font-family: Arial, sans-serif; white-space: nowrap; margin-left: 8px; }
+
+    .content { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+    .split-layout { display: grid; grid-template-columns: minmax(360px, 400px) 1fr; gap: 18px; height: 100%; width: 100%; overflow: hidden; align-items: stretch; padding: 16px; }
+    .split-left { height: 100%; overflow-y: auto; padding-right: 6px; }
+    .split-right { height: 100%; overflow-y: auto; background: var(--stage-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 14px; }
+
+    .opt-group { border: 1px solid var(--card-border); border-radius: 8px; margin-bottom: 14px; overflow: hidden; background: #ffffff; }
+    .opt-group-header { background: var(--card-header-bg); padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--card-header-border); }
+    .opt-group-header-left { display: flex; align-items: center; gap: 6px; }
+    .opt-group-header i { font-size: 14px; color: #64748b; }
+    .opt-group-title { font-size: 8.5pt; font-weight: 700; color: var(--card-header-title); text-transform: uppercase; letter-spacing: .05em; }
+    .opt-group-body { padding: 12px; }
+
+    input[type=text], input[type=number], select, textarea { border: 1.5px solid var(--input-border); border-radius: 6px; padding: 6px 9px; font-size: 10pt; font-family: Arial, sans-serif; background: #ffffff; color: #1e2a3a; outline: none; transition: border-color .15s, box-shadow .15s; width: 100%; box-sizing: border-box; }
+    input[type=text]:focus, input[type=number]:focus, select:focus, textarea:focus { border-color: var(--input-border-focus); border-width: 2px; box-shadow: 0 0 0 3px var(--input-focus-ring); }
+    
+    input[type=range] { accent-color: var(--btn-primary-bg); cursor: pointer; }
+
+    .field-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .field-row label { font-size: 9.5pt; color: #475569; font-weight: 600; }
+    
+    .toggle-row { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+    .toggle-row label { font-size: 10pt; color: #1e2a3a; cursor: pointer; user-select: none; }
+    input[type=radio], input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; accent-color: var(--btn-primary-bg); }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border-radius: 6px; padding: 6px 12px; font-size: 9.5pt; font-family: Arial, sans-serif; font-weight: 600; cursor: pointer; transition: all .12s; border: none; }
+    .btn-primary { background: var(--btn-primary-bg); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--btn-primary-hover); }
+    .btn-secondary { background: var(--btn-secondary-bg); color: #334155; border: 1.5px solid var(--btn-secondary-border); }
+    .btn-secondary:hover:not(:disabled) { background: var(--btn-secondary-hover-bg); border-color: var(--btn-secondary-hover-border); }
+    .btn-green { background: var(--btn-green-bg); color: #fff; }
+    .btn-green:hover:not(:disabled) { background: var(--btn-green-hover); }
+    .btn-danger { background: var(--btn-danger-bg); color: #fff; }
+    .btn-danger:hover:not(:disabled) { background: var(--btn-danger-hover); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; justify-content: center; }
+
+    /* Button Group Radio Toggles */
+    .btn-group { display: flex; gap: 6px; width: 100%; }
+    .btn-group input[type="radio"] { display: none; }
+    .btn-group label { flex: 1; text-align: center; padding: 5px 4px; font-size: 8.5pt; font-weight: bold; border: 1.5px solid var(--card-border); border-radius: 4px; background: #fff; color: #475569; cursor: pointer; transition: 0.15s; }
+    .btn-group label:hover { background: #f8fafc; border-color: var(--input-border-hover); }
+    .btn-group input[type="radio"]:checked + label { background: #eef3fb; border-color: var(--btn-primary-bg); color: var(--btn-primary-bg); }
+
+    /* Header Specific Buttons */
+    .btn-hdr { padding: 4px 10px; font-size: 9pt; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+    .btn-hdr:hover:not(:disabled) { background: rgba(255,255,255,0.2); }
+    .btn-hdr:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .hidden { display: none !important; }
+
+    /* Custom Modals */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(30, 42, 58, 0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    .modal-box { background: var(--app-panel-bg); padding: 24px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); max-width: 440px; width: 100%; border: 1px solid var(--card-border); max-height: 90vh; overflow-y: auto; }
+    .modal-title { font-size: 14pt; font-weight: bold; margin-bottom: 12px; color: var(--header-bg); }
+    .modal-text { font-size: 11pt; color: #475569; margin-bottom: 24px; line-height: 1.4; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;}
+
+    /* Zoom & Scroll Canvas System */
+    .canvas-viewport { position: relative; background: #e2e8f0; border: 1px solid var(--card-border); border-radius: 8px; box-shadow: inset 0 1px 4px rgba(0,0,0,0.1); width: 100%; flex: 1; overflow: auto; }
+    .canvas-inner-wrapper { min-width: 100%; min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; }
+    #mainCanvas { background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: crosshair; transform-origin: center center; touch-action: none; }
+
+    /* Toast notification */
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--header-bg); color: #fff; padding: 10px 18px; border-radius: 6px; font-size: 10pt; box-shadow: 0 4px 12px rgba(0,0,0,0.25); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 2000; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .multi-note { background: #eef3fb; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 8px; font-size: 8.5pt; color: #1e429f; margin-bottom: 12px; line-height: 1.35; }
+
+    .stage-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 10px; }
+    .export-tray { display: flex; flex-direction: row; align-items: center; gap: 6px; }
+
+    /* Formatting Toolbar & Editor */
+    .format-bar { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #f8fafc; border: 1px solid var(--card-border); border-radius: 6px 6px 0 0; border-bottom: none; }
+    .format-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .fmt-btn { background: #fff; border: 1px solid var(--card-border); border-radius: 4px; cursor: pointer; padding: 4px 8px; font-weight: bold; color: #334155; font-size: 10pt; transition: 0.1s; display: flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; }
+    .fmt-btn:hover { background: #eef3fb; border-color: var(--btn-primary-bg); color: var(--btn-primary-bg); }
+    .fmt-btn.active { background: #eef3fb; border-color: var(--btn-primary-bg); box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
+    .fmt-divider { width: 1px; height: 24px; background: var(--card-border); margin: 0 2px; }
+
+    /* Rich Text ContentEditable */
+    #propText { 
+      border: 1.5px solid var(--input-border); border-radius: 0 0 6px 6px; padding: 8px; 
+      font-size: 10pt; font-family: Arial, sans-serif; background: #ffffff; 
+      color: #1e2a3a; outline: none; min-height: 80px; overflow-y: auto; 
+      transition: border-color .15s; 
+    }
+    #propText:focus { border-color: var(--btn-primary-bg); }
+    #propText ul, #propText ol { padding-left: 20px; margin: 4px 0; }
+    #propText sup, #propText sub { font-size: 0.8em; }
+
+    /* Custom Dropdown Menus */
+    .dropdown-custom { position: relative; display: inline-block; }
+    .dropdown-menu { display: none; position: absolute; bottom: calc(100% + 4px); left: 0; z-index: 100; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 -4px 12px rgba(0,0,0,0.15); padding: 6px; width: 160px; }
+    .dropdown-menu.open { display: block; }
+    .char-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    .char-btn { border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; border-radius: 4px; text-align: center; padding: 4px 0; font-size: 11pt; color: #1e2a3a; transition: 0.1s; }
+    .char-btn:hover { background: #eef3fb; border-color: var(--btn-primary-bg); color: var(--btn-primary-bg); }
+
+    .cell-header-toggle { background: #eef3fb; padding: 6px 8px; border-radius: 4px; border: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .cell-header-toggle span { font-size: 8.5pt; font-weight: bold; color: #1e429f; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header id="app-header">
+      <div class="header-left">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='6' fill='%231e2a3a'/%3E%3Crect x='6' y='6' width='20' height='5' rx='1.5' fill='%233266ad'/%3E%3Crect x='6' y='14' width='7' height='12' rx='1.5' fill='%23cbd5e1'/%3E%3Crect x='15' y='14' width='11' height='12' rx='1.5' fill='%23ffffff'/%3E%3C/svg%3E" alt="App Icon" class="header-icon">
+        <div class="header-titles">
+          <div id="app-title">A Humble Note Builder</div>
+          <div id="app-subtitle">Pedagogical canvas for guided student notes &mdash; Built by Steven Humble</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <!-- Project Controls -->
+        <button class="btn btn-hdr" onclick="newProject()"><i class="ti ti-file"></i> New</button>
+        <button class="btn btn-hdr" onclick="document.getElementById('projUpload').click()"><i class="ti ti-folder-open"></i> Open</button>
+        <input type="file" id="projUpload" accept=".json,.humblenote" class="hidden" onchange="openProject(event)">
+        <button class="btn btn-hdr" onclick="saveProject()" title="Save (Ctrl/Cmd+S)"><i class="ti ti-device-floppy"></i> Save</button>
+        <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.2); margin: 0 4px;"></div>
+        <!-- Undo/Redo -->
+        <button class="btn btn-hdr" id="btnUndo" onclick="undo()" disabled title="Undo (Ctrl/Cmd+Z)"><i class="ti ti-arrow-back-up"></i></button>
+        <button class="btn btn-hdr" id="btnRedo" onclick="redo()" disabled title="Redo (Ctrl/Cmd+Shift+Z)"><i class="ti ti-arrow-forward-up"></i></button>
+        
+        <div class="toolbar-ver">V 2.1.0 &mdash; 2026-10-18</div>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="split-layout">
+        
+        <!-- SIDEBAR -->
+        <aside class="split-left" id="controls-panel">
+          
+          <!-- PROPERTIES PANEL -->
+          <div class="opt-group hidden" id="propPanel">
+            <div class="opt-group-header">
+              <div class="opt-group-header-left">
+                <i class="ti ti-adjustments"></i>
+                <span class="opt-group-title">Element Properties</span>
+              </div>
+            </div>
+            <div class="opt-group-body">
+              <div id="multiSelectNote" class="multi-note hidden"></div>
+              
+              <!-- DYNAMIC TEMPLATE EDITOR BUTTON -->
+              <div class="btn-row" id="templateEditRow" style="display: none; margin-top: 0; margin-bottom: 16px;">
+                <button class="btn btn-primary" onclick="editCurrentTemplate()" style="width: 100%; background: #0ea5e9; border: 1px solid #0284c7;"><i class="ti ti-edit"></i> Edit Organizer Structure</button>
+              </div>
+
+              <!-- LINE PROPERTIES -->
+              <div id="lineProps" class="hidden">
+                <div class="field-row">
+                  <label for="propLineType">Line Direction</label>
+                  <select id="propLineType" onchange="updateSelectedElement(); pushHistory();">
+                    <option value="horizontal">Horizontal</option>
+                    <option value="vertical">Vertical</option>
+                    <option value="diag-down">Diagonal (Top-Left to Bottom-Right)</option>
+                    <option value="diag-up">Diagonal (Bottom-Left to Top-Right)</option>
+                  </select>
+                </div>
+                <div class="field-row">
+                  <label for="propArrowType">Arrowheads</label>
+                  <select id="propArrowType" onchange="updateSelectedElement(); pushHistory();">
+                    <option value="none">None</option>
+                    <option value="end">End Arrow</option>
+                    <option value="both">Both Ends</option>
+                  </select>
+                </div>
+                <hr style="border:0; border-top:1px solid var(--card-border); margin: 10px 0;">
+              </div>
+
+              <!-- IMAGE PROPERTIES -->
+              <div id="imgProps" class="hidden">
+                <div class="toggle-row" style="margin-bottom: 6px;">
+                  <input type="checkbox" id="propImgLock" onchange="updateSelectedElement(); pushHistory();" checked>
+                  <label for="propImgLock" style="font-weight: 600; color: #475569;">Lock Aspect Ratio</label>
+                </div>
+                <div class="field-row">
+                  <label for="propImgRotation">Rotation (Degrees)</label>
+                  <input type="number" id="propImgRotation" value="0" oninput="updateSelectedElement();" onchange="pushHistory();">
+                </div>
+                <hr style="border:0; border-top:1px solid var(--card-border); margin: 10px 0;">
+              </div>
+
+              <!-- ELLIPSE PROPERTIES -->
+              <div id="ellipseProps" class="hidden">
+                <div class="field-row">
+                  <label for="propEllipseFill">Background</label>
+                  <select id="propEllipseFill" onchange="updateSelectedElement(); pushHistory();">
+                    <option value="solid">White (covers what's behind it)</option>
+                    <option value="none">Transparent</option>
+                  </select>
+                </div>
+                <hr style="border:0; border-top:1px solid var(--card-border); margin: 10px 0;">
+              </div>
+
+              <div id="boxProps" class="hidden">
+                <div class="field-row">
+                  <label for="propLabel">Header Label</label>
+                  <input type="text" id="propLabel" oninput="updateSelectedElement()" onchange="pushHistory()">
+                </div>
+                <div class="field-row">
+                  <label for="propLabelAlign">Label Alignment</label>
+                  <select id="propLabelAlign" onchange="updateSelectedElement(); pushHistory();">
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+                <div class="field-row">
+                  <label for="propBgStyle">Internal Pattern</label>
+                  <select id="propBgStyle" onchange="updateSelectedElement(); pushHistory();">
+                    <option value="none">Blank (None)</option>
+                    <option value="lines">Writing Lines</option>
+                    <option value="grid">Graphing Grid</option>
+                  </select>
+                </div>
+                <!-- Dynamic Spacing Inputs -->
+                <div class="field-row" id="lineSizeRow" style="display: none; margin-top: 4px;">
+                  <label for="propLineSize">Line Spacing (px)</label>
+                  <input type="number" id="propLineSize" min="5" max="200" onchange="setPatternSize('line', this)">
+                </div>
+                <div class="field-row" id="gridSizeRow" style="display: none; margin-top: 4px;">
+                  <label for="propGridSize">Grid Spacing (px)</label>
+                  <input type="number" id="propGridSize" min="5" max="200" onchange="setPatternSize('grid', this)">
+                </div>
+                <hr style="border:0; border-top:1px solid var(--card-border); margin: 10px 0;">
+              </div>
+
+              <div id="tableProps" class="hidden">
+                <div class="grid-2" style="margin-bottom: 10px;">
+                  <div class="field-row">
+                    <label>Rows</label>
+                    <input type="number" id="propRows" min="1" onchange="updateSelectedElement(); pushHistory();">
+                  </div>
+                  <div class="field-row">
+                    <label>Cols</label>
+                    <input type="number" id="propCols" min="1" onchange="updateSelectedElement(); pushHistory();">
+                  </div>
+                </div>
+                <div class="toggle-row" style="margin-bottom: 6px;">
+                  <input type="checkbox" id="propCustomCols" onchange="updateSelectedElement(); pushHistory();">
+                  <label for="propCustomCols" style="font-weight: 600; color: #475569;">Custom Column Widths</label>
+                </div>
+                <hr style="border:0; border-top:1px solid var(--card-border); margin: 10px 0;">
+              </div>
+
+              <div class="field-row" id="textPropRow" style="margin-bottom:0;">
+                
+                <!-- Table Cell Focus UI -->
+                <div id="tableCellSettings" class="cell-header-toggle hidden">
+                  <span id="activeCellLabel">Cell R1:C1</span>
+                  <select id="fmtTarget" onchange="refreshPropPanel()" style="font-size: 8.5pt; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <option value="cell">Format Cell</option>
+                    <option value="table">Format Table</option>
+                  </select>
+                </div>
+
+                <!-- 3-Tier Formatting Toolbar -->
+                <div class="format-bar">
+                  <!-- Row 1: Global Font size, Local Styling -->
+                  <div class="format-row">
+                    <input type="number" id="fmtSize" value="12" min="6" max="96" style="width: 48px; height: 34px; padding: 0 4px;" title="Font size for this element (6–96)" onchange="updateFormat('size', this.value)">
+                    <div class="fmt-divider"></div>
+                    <button class="fmt-btn" onclick="execCmd('bold')" title="Bold"><i class="ti ti-bold"></i></button>
+                    <button class="fmt-btn" onclick="execCmd('italic')" title="Italic"><i class="ti ti-italic"></i></button>
+                    <button class="fmt-btn" onclick="execCmd('underline')" title="Underline"><i class="ti ti-underline"></i></button>
+                    <button class="fmt-btn" onclick="execCmd('strikeThrough')" title="Strikethrough"><i class="ti ti-strikethrough"></i></button>
+                  </div>
+                  
+                  <!-- Row 2: Math/Greek, Super/Sub, Lists -->
+                  <div class="format-row">
+                    <div class="dropdown-custom">
+                      <button class="fmt-btn" onclick="toggleDropdown('mathMenu')" title="Math Symbols"><i class="ti ti-math"></i></button>
+                      <div class="dropdown-menu" id="mathMenu">
+                        <div class="char-grid">
+                          <div class="char-btn" onclick="insertChar('±')">±</div>
+                          <div class="char-btn" onclick="insertChar('×')">×</div>
+                          <div class="char-btn" onclick="insertChar('÷')">÷</div>
+                          <div class="char-btn" onclick="insertChar('√')">√</div>
+                          <div class="char-btn" onclick="insertChar('∞')">∞</div>
+                          <div class="char-btn" onclick="insertChar('≈')">≈</div>
+                          <div class="char-btn" onclick="insertChar('≠')">≠</div>
+                          <div class="char-btn" onclick="insertChar('≤')">≤</div>
+                          <div class="char-btn" onclick="insertChar('≥')">≥</div>
+                          <div class="char-btn" onclick="insertChar('π')">π</div>
+                          <div class="char-btn" onclick="insertChar('Σ')">Σ</div>
+                          <div class="char-btn" onclick="insertChar('Δ')">Δ</div>
+                          <div class="char-btn" onclick="insertChar('∫')">∫</div>
+                          <div class="char-btn" onclick="insertChar('°')">°</div>
+                          <div class="char-btn" onclick="insertChar('μ')">μ</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="dropdown-custom">
+                      <button class="fmt-btn" onclick="toggleDropdown('greekMenu')" title="Greek Letters">α</button>
+                      <div class="dropdown-menu" id="greekMenu">
+                        <div class="char-grid">
+                          <div class="char-btn" onclick="insertChar('α')">α</div>
+                          <div class="char-btn" onclick="insertChar('β')">β</div>
+                          <div class="char-btn" onclick="insertChar('γ')">γ</div>
+                          <div class="char-btn" onclick="insertChar('δ')">δ</div>
+                          <div class="char-btn" onclick="insertChar('ε')">ε</div>
+                          <div class="char-btn" onclick="insertChar('θ')">θ</div>
+                          <div class="char-btn" onclick="insertChar('λ')">λ</div>
+                          <div class="char-btn" onclick="insertChar('π')">π</div>
+                          <div class="char-btn" onclick="insertChar('ρ')">ρ</div>
+                          <div class="char-btn" onclick="insertChar('σ')">σ</div>
+                          <div class="char-btn" onclick="insertChar('τ')">τ</div>
+                          <div class="char-btn" onclick="insertChar('φ')">φ</div>
+                          <div class="char-btn" onclick="insertChar('ω')">ω</div>
+                          <div class="char-btn" onclick="insertChar('Ω')">Ω</div>
+                          <div class="char-btn" onclick="insertChar('Δ')">Δ</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button class="fmt-btn" onclick="execCmd('superscript')" title="Superscript Toggle"><i class="ti ti-superscript"></i></button>
+                    <button class="fmt-btn" onclick="execCmd('subscript')" title="Subscript Toggle"><i class="ti ti-subscript"></i></button>
+                    <div class="fmt-divider"></div>
+                    <button class="fmt-btn" onclick="insertList('• ')" title="Bullet List"><i class="ti ti-list"></i></button>
+                    <button class="fmt-btn" onclick="insertList('1. ')" title="Numbered List"><i class="ti ti-list-numbers"></i></button>
+                    <button class="fmt-btn" onclick="insertList('I. ')" title="Outline List"><i class="ti ti-list-tree"></i></button>
+                    <button class="fmt-btn" onclick="insertList('☐ ')" title="Checklist"><i class="ti ti-list-check"></i></button>
+                  </div>
+
+                  <!-- Row 3: Global Horizontal & Vertical Alignments -->
+                  <div class="format-row">
+                    <button class="fmt-btn" id="fmtL" onclick="updateFormat('align', 'left')" title="Align Left"><i class="ti ti-align-left"></i></button>
+                    <button class="fmt-btn" id="fmtC" onclick="updateFormat('align', 'center')" title="Align Center"><i class="ti ti-align-center"></i></button>
+                    <button class="fmt-btn" id="fmtR" onclick="updateFormat('align', 'right')" title="Align Right"><i class="ti ti-align-right"></i></button>
+                    <div class="fmt-divider"></div>
+                    <button class="fmt-btn" id="fmtVT" onclick="updateFormat('valign', 'top')" title="Vertical Align Top"><i class="ti ti-layout-align-top"></i></button>
+                    <button class="fmt-btn" id="fmtVM" onclick="updateFormat('valign', 'middle')" title="Vertical Align Middle"><i class="ti ti-layout-align-middle"></i></button>
+                    <button class="fmt-btn" id="fmtVB" onclick="updateFormat('valign', 'bottom')" title="Vertical Align Bottom"><i class="ti ti-layout-align-bottom"></i></button>
+                  </div>
+                </div>
+                <div id="propText" contenteditable="true" oninput="updateSelectedElement()" onblur="pushHistory()"></div>
+              </div>
+              
+              <!-- Border / Line Styling System -->
+              <div id="borderSettingsContainer" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border);">
+                <div class="field-row">
+                  <label>Border / Line Style</label>
+                  <div class="btn-group" style="margin-top: 4px;">
+                    <input type="radio" id="borderNone" name="propBorderStyle" value="none" onchange="updateSelectedElement(); pushHistory();">
+                    <label for="borderNone">None</label>
+                    <input type="radio" id="borderSolid" name="propBorderStyle" value="solid" onchange="updateSelectedElement(); pushHistory();">
+                    <label for="borderSolid">Solid</label>
+                    <input type="radio" id="borderDashed" name="propBorderStyle" value="dashed" onchange="updateSelectedElement(); pushHistory();">
+                    <label for="borderDashed">Dashed</label>
+                    <input type="radio" id="borderDotted" name="propBorderStyle" value="dotted" onchange="updateSelectedElement(); pushHistory();">
+                    <label for="borderDotted">Dotted</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="btn-row">
+                <button class="btn btn-danger" onclick="deleteSelected()" title="Delete (Backspace / Delete key)"><i class="ti ti-trash"></i> Delete Selected</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-group">
+            <div class="opt-group-header">
+              <div class="opt-group-header-left">
+                <i class="ti ti-settings"></i>
+                <span class="opt-group-title">Document & Canvas Setup</span>
+              </div>
+            </div>
+            <div class="opt-group-body">
+              <div class="field-row">
+                <label for="paperSize">Target Paper Size</label>
+                <select id="paperSize" onchange="handlePaperSizeChange(true)">
+                  <option value="notebook" selected>Composition Notebook (6.25" x 8.5")</option>
+                  <option value="full-notebook">Full Composition Notebook (7" x 9")</option>
+                  <option value="letter">Standard Letter (8.5" x 11")</option>
+                  <option value="custom">Custom Size...</option>
+                </select>
+              </div>
+              <div class="grid-2 hidden" id="customSizeRow" style="margin-bottom: 10px;">
+                <div class="field-row">
+                  <label>Width (in)</label>
+                  <input type="number" id="customW" value="5.5" step="0.25" onchange="handlePaperSizeChange(true)">
+                </div>
+                <div class="field-row">
+                  <label>Height (in)</label>
+                  <input type="number" id="customH" value="8.5" step="0.25" onchange="handlePaperSizeChange(true)">
+                </div>
+              </div>
+              <div class="field-row" style="margin-top: 4px;">
+                <label for="paperOrientation">Orientation</label>
+                <select id="paperOrientation" onchange="handlePaperSizeChange(true)">
+                  <option value="portrait" selected>Portrait</option>
+                  <option value="landscape">Landscape</option>
+                </select>
+              </div>
+              <div class="field-row" style="margin-top: 4px;">
+                <label for="globalFont">Global Font Family</label>
+                <select id="globalFont" onchange="updateFont(); pushHistory();">
+                  <option value="Arial, sans-serif">Arial (Sans-Serif)</option>
+                  <option value="'Arial Narrow', Arial, sans-serif">Arial Narrow (Sans-Serif)</option>
+                  <option value="Aptos, sans-serif">Aptos (Modern Sans-Serif)</option>
+                  <option value="'Aptos Narrow', sans-serif">Aptos Narrow (Modern Sans-Serif)</option>
+                  <option value="Verdana, sans-serif">Verdana (Wide Sans-Serif)</option>
+                  <option value="Tahoma, sans-serif">Tahoma (Sans-Serif)</option>
+                  <option value="'Times New Roman', serif">Times New Roman (Serif)</option>
+                  <option value="Georgia, serif">Georgia (Serif)</option>
+                  <option value="'Courier New', monospace">Courier New (Monospace)</option>
+                  <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans MS (Dyslexia Friendly)</option>
+                </select>
+              </div>
+              <hr style="border:0; border-top:1px solid var(--card-border); margin: 10px 0;">
+              
+              <!-- Alignment & Grid Options -->
+              <div class="field-row">
+                <div class="toggle-row" style="margin-bottom: 4px;">
+                  <input type="checkbox" id="snapGrid" onchange="drawCanvas()">
+                  <label for="snapGrid">Snap to Grid</label>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <label style="font-size: 8.5pt; color: var(--input-label); min-width: 55px;">Grid Size</label>
+                  <input type="range" id="snapSizeSlider" min="2" max="100" value="14" style="flex: 1;" oninput="setSnapSize(this.value)" title="Saved with this document">
+                  <input type="number" id="snapSize" value="14" min="2" max="200" style="width: 48px; padding: 2px 4px;" onchange="setSnapSize(this.value)" title="Saved with this document (2–200)">
+                </div>
+              </div>
+              <div class="toggle-row" style="margin-top: 10px;">
+                <input type="checkbox" id="smartGuides" checked onchange="drawCanvas()">
+                <label for="smartGuides">Smart Alignment Guides</label>
+              </div>
+              <div class="toggle-row" style="margin-top: 8px;">
+                <input type="checkbox" id="showMargins" checked onchange="drawCanvas()">
+                <label for="showMargins" style="color: #64748b;">Show .25" Safe Margins</label>
+              </div>
+
+              <!-- Clear Canvas Moved Here -->
+              <div class="btn-row" style="margin-top: 12px; border-top: 1px solid var(--card-border); padding-top: 12px;">
+                <button class="btn btn-danger" onclick="clearCanvas()" style="width: 100%;"><i class="ti ti-eraser"></i> Clear Page Elements</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PAGE TITLES PANEL -->
+          <div class="opt-group">
+            <div class="opt-group-header">
+              <div class="opt-group-header-left">
+                <i class="ti ti-heading"></i>
+                <span class="opt-group-title">Page Titles</span>
+              </div>
+            </div>
+            <div class="opt-group-body">
+              <div class="field-row">
+                <label>Content to Add</label>
+                <div class="btn-group" style="margin-top: 4px;">
+                  <input type="radio" id="ptTypeNum" name="ptType" value="number">
+                  <label for="ptTypeNum">Number</label>
+                  <input type="radio" id="ptTypeTitle" name="ptType" value="title">
+                  <label for="ptTypeTitle">Title</label>
+                  <input type="radio" id="ptTypeBoth" name="ptType" value="both" checked>
+                  <label for="ptTypeBoth">Both</label>
+                </div>
+              </div>
+              <div class="field-row" style="margin-top: 8px;">
+                <label>Alignment</label>
+                <div class="btn-group" style="margin-top: 4px;">
+                  <input type="radio" id="ptAlignL" name="ptAlign" value="left" checked>
+                  <label for="ptAlignL">Left Side</label>
+                  <input type="radio" id="ptAlignR" name="ptAlign" value="right">
+                  <label for="ptAlignR">Right Side</label>
+                </div>
+              </div>
+              <div class="btn-row" style="margin-top: 12px;">
+                <button class="btn btn-secondary" style="width: 100%;" onclick="addPageTitle()"><i class="ti ti-plus"></i> Add to Page</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-group">
+            <div class="opt-group-header">
+              <div class="opt-group-header-left">
+                <i class="ti ti-plus"></i>
+                <span class="opt-group-title">Insert Elements</span>
+              </div>
+            </div>
+            <div class="opt-group-body">
+              <div class="grid-2">
+                <button class="btn btn-secondary" onclick="addElement('box')"><i class="ti ti-square"></i> Blank Box</button>
+                <button class="btn btn-secondary" onclick="addElement('text')"><i class="ti ti-typography"></i> Text Block</button>
+                <button class="btn btn-secondary" onclick="addElement('ellipse')"><i class="ti ti-circle"></i> Ellipse</button>
+                <button class="btn btn-secondary" onclick="addElement('line')"><i class="ti ti-arrow-up-right"></i> Line / Arrow</button>
+                <button class="btn btn-secondary" onclick="addElement('table')"><i class="ti ti-table"></i> Data Table</button>
+                <button class="btn btn-green" onclick="document.getElementById('imgUpload').click()"><i class="ti ti-photo"></i> Upload Image</button>
+                <input type="file" id="imgUpload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+              </div>
+            </div>
+          </div>
+
+          <!-- NEW GRAPHIC ORGANIZERS PANEL -->
+          <div class="opt-group">
+            <div class="opt-group-header">
+              <div class="opt-group-header-left">
+                <i class="ti ti-layout-dashboard"></i>
+                <span class="opt-group-title">Graphic Organizers</span>
+              </div>
+            </div>
+            <div class="opt-group-body">
+              <div class="grid-2">
+                <button class="btn btn-secondary" onclick="loadTemplate('cornell')"><i class="ti ti-layout-sidebar"></i> Cornell Notes</button>
+                <button class="btn btn-secondary" onclick="loadTemplate('frayer')"><i class="ti ti-layout-grid"></i> Frayer Model</button>
+                <button class="btn btn-secondary" onclick="loadTemplate('vocab')"><i class="ti ti-book"></i> Vocab Log</button>
+                <button class="btn btn-secondary" onclick="loadTemplate('lab')"><i class="ti ti-flask"></i> Lab Protocol</button>
+                <button class="btn btn-secondary" onclick="loadTemplate('kwl')"><i class="ti ti-columns"></i> KWL Chart</button>
+                <button class="btn btn-secondary" onclick="loadTemplate('tchart')"><i class="ti ti-layout-columns"></i> T-Chart</button>
+                <button class="btn btn-secondary" onclick="loadTemplate('venn')"><i class="ti ti-circle-half-2"></i> Venn Diagram</button>
+                <button class="btn btn-secondary" onclick="openTemplateConfig('bubble')"><i class="ti ti-chart-bubbles"></i> Bubble Map...</button>
+                <button class="btn btn-secondary" onclick="openTemplateConfig('double-bubble')"><i class="ti ti-chart-bubbles"></i> Double Bubble...</button>
+                <button class="btn btn-secondary" onclick="openTemplateConfig('flow')"><i class="ti ti-arrow-right-square"></i> Flow Map...</button>
+                <button class="btn btn-secondary" onclick="openTemplateConfig('cycle')"><i class="ti ti-rotate-clockwise"></i> Cyclical Map...</button>
+                <button class="btn btn-secondary" onclick="openTemplateConfig('tree')"><i class="ti ti-sitemap"></i> Tree Map...</button>
+                <button class="btn btn-secondary" onclick="openTemplateConfig('brace')"><i class="ti ti-fold"></i> Brace Map...</button>
+                <button class="btn btn-secondary" onclick="loadTemplate('fishbone')"><i class="ti ti-bone"></i> Fishbone Diagram</button>
+                <button class="btn btn-secondary" onclick="loadTemplate('concept')"><i class="ti ti-bulb"></i> Concept Map</button>
+                <button class="btn btn-secondary" onclick="openTemplateConfig('storyboard')"><i class="ti ti-layout-board"></i> Storyboard Grid...</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+        
+        <!-- STAGE -->
+        <section class="split-right" id="stage-panel">
+          <div class="stage-header">
+            <div class="export-tray">
+              <button class="btn btn-primary" onclick="downloadPDF()"><i class="ti ti-file-type-pdf"></i> Download PDF</button>
+              <div class="fmt-divider" style="margin: 0 8px; height: 24px;"></div>
+              
+              <!-- Multi-Page Controls -->
+              <button class="btn btn-secondary" onclick="movePage(-1)" id="btnMovePageLeft" title="Move Page Left"><i class="ti ti-arrow-left"></i></button>
+              <button class="btn btn-secondary" onclick="prevPage()" id="btnPrevPage" title="Previous Page"><i class="ti ti-chevron-left"></i></button>
+              
+              <span style="font-size: 9.5pt; font-weight: bold; color: var(--card-header-title); padding: 0 4px;" id="pageIndicator">Page 1 / 1</span>
+              
+              <button class="btn btn-secondary" onclick="nextPage()" id="btnNextPage" title="Next Page"><i class="ti ti-chevron-right"></i></button>
+              <button class="btn btn-secondary" onclick="movePage(1)" id="btnMovePageRight" title="Move Page Right"><i class="ti ti-arrow-right"></i></button>
+              
+              <div class="fmt-divider" style="margin: 0 4px; height: 18px;"></div>
+              
+              <button class="btn btn-secondary" onclick="addPage()" title="Add New Page"><i class="ti ti-file-plus"></i></button>
+              <button class="btn btn-danger" onclick="deletePage()" id="btnDelPage" title="Delete Current Page"><i class="ti ti-trash"></i></button>
+            </div>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              <button class="btn btn-secondary" onclick="setZoom(state.zoom - 0.1)" title="Zoom Out"><i class="ti ti-minus"></i></button>
+              <span style="font-size: 9.5pt; width: 45px; text-align: center; font-weight: bold; color: var(--input-text);" id="zoomLabel">100%</span>
+              <button class="btn btn-secondary" onclick="setZoom(state.zoom + 0.1)" title="Zoom In"><i class="ti ti-plus"></i></button>
+              <button class="btn btn-secondary" onclick="fitToWidth()" title="Fit Width"><i class="ti ti-arrows-maximize"></i> Fit Width</button>
+              <button class="btn btn-secondary" onclick="fitToPage()" title="Fit Page"><i class="ti ti-maximize"></i> Fit Page</button>
+            </div>
+          </div>
+
+          <div class="canvas-viewport" id="canvasViewport">
+            <div class="canvas-inner-wrapper">
+              <canvas id="mainCanvas"></canvas>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+    
+    <!-- Custom Modals -->
+    <div id="scaleModal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div class="modal-title">Paper Size Changed</div>
+        <div class="modal-text">Do you want to mathematically scale your existing elements to match the new paper dimensions?</div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="resolveScaleModal('cancel')">Cancel</button>
+          <button class="btn btn-danger" onclick="resolveScaleModal('no')">No, do not scale</button>
+          <button class="btn btn-green" onclick="resolveScaleModal('yes')">Yes, scale</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <!-- Template Options Modal -->
+    <div id="templateModal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div class="modal-title" id="tmTitle">Template Options</div>
+        <div class="modal-text" id="tmDesc" style="margin-bottom: 12px;">Customize your graphic organizer.</div>
+        <div id="tmInputs" style="margin-bottom: 24px; display: flex; flex-direction: column; gap: 10px;"></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeTemplateModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="confirmTemplate()">Insert Template</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DPI = 96;
+    const EXPORT_DPI = 300;
+    const MAX_HISTORY = 200;
+    const DEFAULT_SNAP_SIZE = 14;
+
+    function clampNum(val, min, max, fallback) {
+      const n = parseFloat(val);
+      if (!isFinite(n)) return fallback;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function getDefaultLineSize() { return clampNum(localStorage.getItem('humbleNoteLineSize'), 5, 200, 20); }
+    function getDefaultGridSize() { return clampNum(localStorage.getItem('humbleNoteGridSize'), 5, 200, 14); }
+
+    function generateId() { return Math.random().toString(36).substr(2, 9); }
+
+    let state = {
+      pages: [ { id: generateId(), elements: [] } ],
+      currentPageIndex: 0,
+      selectedId: null,      // Primary selection (drives the properties panel)
+      selectedIds: [],       // Full selection (Shift+click adds/removes)
+      selectedCell: { r: 0, c: 0 },
+      zoom: 1.0,
+      paper: { widthInches: 6.25, heightInches: 8.5 },
+      orientation: 'portrait',
+      globalFont: "Arial, sans-serif",
+      snapSize: DEFAULT_SNAP_SIZE, // Saved in the .humblenote file
+      isExporting: false,
+      activeGuides: []
+    };
+
+    let clipboardData = null; // Array of copied elements
+
+    // --- Image Store ---
+    // Image data lives here (keyed by imageId) instead of on the elements, so undo
+    // snapshots stay small and images survive undo/redo, saving and reopening.
+    const imageStore = {};  // imageId -> data URL
+    const imageCache = {};  // imageId -> loaded HTMLImageElement
+
+    function getImage(imageId) {
+      if (!imageId || !imageStore[imageId]) return null;
+      if (!imageCache[imageId]) {
+        const img = new Image();
+        img.onload = () => drawCanvas();
+        img.src = imageStore[imageId];
+        imageCache[imageId] = img;
+      }
+      return imageCache[imageId];
+    }
+
+    function storeImage(dataURL) {
+      const id = 'img_' + generateId();
+      imageStore[id] = dataURL;
+      return id;
+    }
+
+    // --- Document Serialization ---
+    function getDocData() {
+      return { pages: state.pages, currentPageIndex: state.currentPageIndex, paper: state.paper, orientation: state.orientation, font: state.globalFont };
+    }
+
+    // Full file contents: document + per-file settings + referenced images
+    function serializeForFile() {
+      const data = getDocData();
+      data.snapSize = state.snapSize;
+      data.images = {};
+      state.pages.forEach(p => p.elements.forEach(el => {
+        if (el.type === 'image' && el.imageId && imageStore[el.imageId]) data.images[el.imageId] = imageStore[el.imageId];
+      }));
+      return JSON.stringify(data);
+    }
+
+    // Removes scripts, event handlers and unknown tags from rich text loaded from files/links
+    const SAFE_TAGS = ['b', 'strong', 'i', 'em', 'u', 's', 'strike', 'sup', 'sub', 'br', 'div', 'p', 'span'];
+    function sanitizeRichText(html) {
+      if (!html || typeof html !== 'string') return '';
+      const tpl = document.createElement('template'); // inert: nothing inside runs or loads
+      tpl.innerHTML = html;
+      const clean = (node) => {
+        Array.from(node.childNodes).forEach(child => {
+          if (child.nodeType === 1) {
+            const tag = child.tagName.toLowerCase();
+            if (tag === 'script' || tag === 'style' || tag === 'iframe' || tag === 'object') { child.remove(); return; }
+            clean(child);
+            if (SAFE_TAGS.includes(tag)) {
+              Array.from(child.attributes).forEach(a => child.removeAttribute(a.name));
+            } else {
+              child.replaceWith(...Array.from(child.childNodes));
+            }
+          } else if (child.nodeType !== 3) {
+            child.remove();
+          }
+        });
+      };
+      clean(tpl.content);
+      return tpl.innerHTML;
+    }
+
+    // Validates and cleans a document that came from outside (file, link, autosave)
+    function prepareExternalDoc(snapStr) {
+      const snap = JSON.parse(snapStr);
+      if (!snap || typeof snap !== 'object') throw new Error('Not a Humble Note file');
+      if (!Array.isArray(snap.pages) && !Array.isArray(snap.elements)) throw new Error('Not a Humble Note file');
+      if (!Array.isArray(snap.pages)) { snap.pages = [ { id: generateId(), elements: snap.elements } ]; snap.currentPageIndex = 0; delete snap.elements; }
+      if (!snap.paper || !(snap.paper.widthInches > 0) || !(snap.paper.heightInches > 0)) snap.paper = { widthInches: 6.25, heightInches: 8.5 };
+
+      if (snap.images && typeof snap.images === 'object') {
+        Object.keys(snap.images).forEach(id => {
+          if (typeof snap.images[id] === 'string' && snap.images[id].startsWith('data:image/')) { imageStore[id] = snap.images[id]; delete imageCache[id]; }
+        });
+      }
+
+      snap.pages.forEach(page => {
+        if (!Array.isArray(page.elements)) page.elements = [];
+        if (!page.id) page.id = generateId();
+        page.elements.forEach(el => {
+          if (typeof el.text === 'string') el.text = sanitizeRichText(el.text);
+          if (el.type === 'table' && Array.isArray(el.cells)) {
+            el.cells.forEach(row => row.forEach(cell => { if (cell && typeof cell.text === 'string') cell.text = sanitizeRichText(cell.text); }));
+          }
+          // Older files stored the image as a data URL string on the element
+          if (el.type === 'image' && !el.imageId && typeof el.img === 'string' && el.img.startsWith('data:image/')) el.imageId = storeImage(el.img);
+          delete el.img;
+        });
+      });
+      return snap;
+    }
+
+    // --- History Engine ---
+    let historyStack = [];
+    let historyIndex = -1;
+
+    function pushHistory() {
+      const snap = JSON.stringify(getDocData());
+      if (historyIndex >= 0 && historyStack[historyIndex] === snap) return;
+      historyStack = historyStack.slice(0, historyIndex + 1);
+      historyStack.push(snap);
+      if (historyStack.length > MAX_HISTORY) historyStack.shift();
+      historyIndex = historyStack.length - 1;
+      updateHistoryButtons();
+      scheduleAutosave();
+    }
+
+    function resetHistory() {
+      historyStack = []; historyIndex = -1; pushHistory();
+    }
+
+    function undo() {
+      if (historyIndex > 0) { historyIndex--; restoreState(historyStack[historyIndex]); scheduleAutosave(); }
+    }
+
+    function redo() {
+      if (historyIndex < historyStack.length - 1) { historyIndex++; restoreState(historyStack[historyIndex]); scheduleAutosave(); }
+    }
+
+    // --- Sheet Size ---
+    // The canvas is always at least a full Letter sheet (portrait or landscape) so smaller
+    // notebook pages print with cutting guides. Returns sizes in logical pixels.
+    function getSheetSize() {
+      const W = state.paper.widthInches, H = state.paper.heightInches;
+      const landscape = W > H;
+      return {
+        w: (landscape ? Math.max(11, W) : Math.max(8.5, W)) * DPI,
+        h: (landscape ? Math.max(8.5, H) : Math.max(11, H)) * DPI
+      };
+    }
+
+    // --- Core Scale Fix for Retina/High-DPI Displays ---
+    function resizeCanvas() {
+      const sheet = getSheetSize();
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = sheet.w * dpr;
+      canvas.height = sheet.h * dpr;
+
+      mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function setSnapSize(val, markChanged = true) {
+      const size = Math.round(clampNum(val, 2, 200, DEFAULT_SNAP_SIZE));
+      state.snapSize = size;
+      document.getElementById('snapSize').value = size;
+      document.getElementById('snapSizeSlider').value = Math.min(100, size);
+      drawCanvas();
+      if (markChanged) scheduleAutosave();
+    }
+
+    function syncPaperControls() {
+      const w = state.paper.widthInches, h = state.paper.heightInches;
+      const short = Math.min(w, h), long = Math.max(w, h);
+      let paperVal = 'custom';
+      if (short === 6.25 && long === 8.5) paperVal = 'notebook';
+      else if (short === 7 && long === 9) paperVal = 'full-notebook';
+      else if (short === 8.5 && long === 11) paperVal = 'letter';
+
+      document.getElementById('paperSize').value = paperVal;
+      document.getElementById('paperOrientation').value = state.orientation;
+      document.getElementById('customW').value = short;
+      document.getElementById('customH').value = long;
+      document.getElementById('customSizeRow').classList.toggle('hidden', paperVal !== 'custom');
+      lastPaperSettings = { size: paperVal, orient: state.orientation, customW: short, customH: long };
+    }
+
+    // Applies a snapshot (from history, or one already passed through prepareExternalDoc)
+    function restoreState(snapOrStr, fileSettings = false) {
+      const snap = (typeof snapOrStr === 'string') ? JSON.parse(snapOrStr) : snapOrStr;
+
+      state.pages = snap.pages;
+      state.currentPageIndex = Math.min(Math.max(0, snap.currentPageIndex || 0), state.pages.length - 1);
+      state.paper = snap.paper;
+      state.orientation = snap.orientation || (snap.paper.widthInches > snap.paper.heightInches ? 'landscape' : 'portrait');
+      if (snap.font) state.globalFont = snap.font;
+
+      document.getElementById('globalFont').value = state.globalFont;
+      syncPaperControls();
+
+      // Per-file settings only come from files, not from undo/redo
+      if (fileSettings) setSnapSize(snap.snapSize !== undefined ? snap.snapSize : DEFAULT_SNAP_SIZE, false);
+
+      state.pages.forEach(page => {
+          page.elements.forEach(el => {
+            if (el.type === 'table' && !el.cells) {
+               el.cells = buildCells(null, el.rows, el.cols);
+               el.cells[0][0].text = el.text || "";
+            }
+            if (el.type === 'box') {
+               if (!el.lineSize) el.lineSize = getDefaultLineSize();
+               if (!el.gridSize) el.gridSize = getDefaultGridSize();
+               if (!el.borderStyle) el.borderStyle = 'solid';
+            }
+          });
+      });
+
+      resizeCanvas();
+
+      const pageEls = state.pages[state.currentPageIndex].elements;
+      const keptIds = state.selectedIds.filter(id => pageEls.some(e => e.id === id));
+      const primary = keptIds.includes(state.selectedId) ? state.selectedId : (keptIds[keptIds.length - 1] || null);
+      selectElement(primary, keptIds);
+
+      applyZoom(); drawCanvas(); updateHistoryButtons();
+    }
+
+    // Loads a document from a file, link or autosave, replacing the current one
+    function loadExternalDoc(snapStr) {
+      const snap = prepareExternalDoc(snapStr); // throws before anything changes if invalid
+      state.selectedIds = []; state.selectedId = null;
+      restoreState(snap, true);
+      resetHistory();
+    }
+
+    function updateHistoryButtons() {
+      document.getElementById('btnUndo').disabled = historyIndex <= 0;
+      document.getElementById('btnRedo').disabled = historyIndex >= historyStack.length - 1;
+    }
+
+    // --- Multi-Page Controls ---
+    function updatePageUI() {
+        document.getElementById('pageIndicator').innerText = `Page ${state.currentPageIndex + 1} / ${state.pages.length}`;
+        document.getElementById('btnPrevPage').disabled = state.currentPageIndex === 0;
+        document.getElementById('btnNextPage').disabled = state.currentPageIndex === state.pages.length - 1;
+        document.getElementById('btnMovePageLeft').disabled = state.currentPageIndex === 0;
+        document.getElementById('btnMovePageRight').disabled = state.currentPageIndex === state.pages.length - 1;
+        document.getElementById('btnDelPage').disabled = state.pages.length <= 1;
+    }
+
+    function addPage() {
+        state.pages.push({ id: generateId(), elements: [] });
+        state.currentPageIndex = state.pages.length - 1;
+        selectElement(null);
+        drawCanvas();
+        pushHistory();
+    }
+
+    function deletePage() {
+        if (state.pages.length > 1) {
+            if (confirm("Are you sure you want to delete this page and all of its elements?")) {
+                state.pages.splice(state.currentPageIndex, 1);
+                if (state.currentPageIndex >= state.pages.length) {
+                    state.currentPageIndex = state.pages.length - 1;
+                }
+                selectElement(null);
+                drawCanvas();
+                pushHistory();
+            }
+        }
+    }
+
+    function prevPage() {
+        if (state.currentPageIndex > 0) {
+            state.currentPageIndex--;
+            selectElement(null);
+            drawCanvas();
+        }
+    }
+
+    function nextPage() {
+        if (state.currentPageIndex < state.pages.length - 1) {
+            state.currentPageIndex++;
+            selectElement(null);
+            drawCanvas();
+        }
+    }
+
+    function movePage(direction) {
+        const newIndex = state.currentPageIndex + direction;
+        if (newIndex >= 0 && newIndex < state.pages.length) {
+            const temp = state.pages[state.currentPageIndex];
+            state.pages[state.currentPageIndex] = state.pages[newIndex];
+            state.pages[newIndex] = temp;
+            state.currentPageIndex = newIndex;
+            selectElement(null);
+            drawCanvas();
+            pushHistory();
+        }
+    }
+
+    // --- File Management & Local Settings ---
+    function loadSettings() {
+      const saved = localStorage.getItem('humbleNoteDefaultSize');
+      if (saved) document.getElementById('paperSize').value = saved;
+      const orient = localStorage.getItem('humbleNoteOrientation');
+      if (orient) document.getElementById('paperOrientation').value = orient;
+      const cw = localStorage.getItem('humbleNoteCustomW');
+      if (cw) document.getElementById('customW').value = cw;
+      const ch = localStorage.getItem('humbleNoteCustomH');
+      if (ch) document.getElementById('customH').value = ch;
+      const f = localStorage.getItem('humbleNoteGlobalFont');
+      if (f) {
+        document.getElementById('globalFont').value = f;
+        state.globalFont = f;
+      }
+    }
+
+    function newProject() {
+      if(confirm("Create a new document? Any unsaved changes will be lost.")) {
+        state.pages = [ { id: generateId(), elements: [] } ];
+        state.currentPageIndex = 0;
+        setSnapSize(DEFAULT_SNAP_SIZE, false);
+        selectElement(null); drawCanvas(); resetHistory();
+        lastSavedContent = serializeForFile();
+      }
+    }
+
+    // --- Unsaved Changes Tracking ---
+    let lastSavedContent = null;
+    function hasUnsavedChanges() {
+      const hasContent = state.pages.some(p => p.elements.length > 0);
+      if (lastSavedContent === null) return hasContent;
+      return serializeForFile() !== lastSavedContent;
+    }
+    window.addEventListener('beforeunload', function(e) {
+      if (hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // --- Autosave (IndexedDB, survives refreshes and closed tabs) ---
+    const AUTOSAVE_DB = 'humbleNoteAutosave';
+    let autosaveTimer = null;
+    function openAutosaveDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(AUTOSAVE_DB, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('docs');
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function writeAutosave() {
+      try {
+        const db = await openAutosaveDB();
+        const tx = db.transaction('docs', 'readwrite');
+        tx.objectStore('docs').put(serializeForFile(), 'current');
+        tx.oncomplete = () => db.close();
+      } catch (err) { console.warn('Autosave failed:', err); }
+    }
+    async function readAutosave() {
+      try {
+        const db = await openAutosaveDB();
+        return await new Promise(resolve => {
+          const req = db.transaction('docs', 'readonly').objectStore('docs').get('current');
+          req.onsuccess = () => { db.close(); resolve(req.result || null); };
+          req.onerror = () => { db.close(); resolve(null); };
+        });
+      } catch (err) { return null; }
+    }
+    function scheduleAutosave() {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(writeAutosave, 800);
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.add('show');
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    async function saveProject() {
+      if (document.activeElement && document.activeElement.id === 'propText') pushHistory(); // capture in-progress typing
+      const content = serializeForFile();
+      const defaultName = `NoteBuilder_${getTimestamp()}.humblenote`;
+
+      if (window.showSaveFilePicker) {
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: defaultName,
+            types: [{
+              description: 'Humble Note File',
+              accept: { 'application/json': ['.humblenote'] },
+            }],
+          });
+          const writable = await fileHandle.createWritable();
+          await writable.write(content);
+          await writable.close();
+          lastSavedContent = content;
+          showToast('Saved.');
+        } catch (err) {
+          // Ignore AbortError if the user cancels the dialog
+          if (err.name !== 'AbortError') { console.error("Save failed:", err); alert("Save failed: " + err.message); }
+        }
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker
+        const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
+        const a = document.createElement('a');
+        a.setAttribute("href", url);
+        a.setAttribute("download", defaultName);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        lastSavedContent = content;
+      }
+    }
+
+    function openProject(e) {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          loadExternalDoc(event.target.result);
+          lastSavedContent = serializeForFile();
+          scheduleAutosave();
+        } catch (err) { console.error(err); alert("Error loading file. It may not be a Humble Note file, or it may be damaged."); }
+      }
+      reader.readAsText(file); e.target.value = '';
+    }
+
+    // --- Canvas Setup ---
+    const canvas = document.getElementById('mainCanvas');
+    const mainCtx = canvas.getContext('2d');
+    const viewport = document.getElementById('canvasViewport');
+
+    let isDragging = false; let isResizing = false;
+    let dragOffsetX = 0; let dragOffsetY = 0;
+    let isResizingCol = null;
+    const HANDLE_SIZE = 12;
+
+    function defaultFormat() { return { size: 12, align: 'left', valign: 'top' }; }
+
+    let scaleModalPromiseResolve = null;
+    let lastPaperSettings = { size: 'notebook', orient: 'portrait', customW: 5.5, customH: 8.5 };
+
+    function showScaleModal() {
+        document.getElementById('scaleModal').classList.remove('hidden');
+        return new Promise(resolve => { scaleModalPromiseResolve = resolve; });
+    }
+
+    function resolveScaleModal(choice) {
+        document.getElementById('scaleModal').classList.add('hidden');
+        if (scaleModalPromiseResolve) { scaleModalPromiseResolve(choice); scaleModalPromiseResolve = null; }
+    }
+
+    async function handlePaperSizeChange(isUserAction = true) {
+      const sizeStr = document.getElementById('paperSize').value;
+      const orientStr = document.getElementById('paperOrientation').value;
+      const customW = clampNum(document.getElementById('customW').value, 1, 24, 8.5);
+      const customH = clampNum(document.getElementById('customH').value, 1, 24, 11);
+      document.getElementById('customW').value = customW;
+      document.getElementById('customH').value = customH;
+      
+      let rawW = 8.5, rawH = 11;
+      if (sizeStr === 'notebook') { rawW = 6.25; rawH = 8.5; }
+      else if (sizeStr === 'full-notebook') { rawW = 7; rawH = 9; }
+      else if (sizeStr === 'custom') { rawW = customW; rawH = customH; }
+
+      let newW = rawW, newH = rawH;
+      if (orientStr === 'landscape') { newW = Math.max(rawW, rawH); newH = Math.min(rawW, rawH); } 
+      else { newW = Math.min(rawW, rawH); newH = Math.max(rawW, rawH); }
+
+      const oldW = state.paper.widthInches;
+      const oldH = state.paper.heightInches;
+
+      if (isUserAction && state.pages.some(p => p.elements.length > 0) && (newW !== oldW || newH !== oldH)) {
+          const choice = await showScaleModal();
+          
+          if (choice === 'cancel') {
+              document.getElementById('paperSize').value = lastPaperSettings.size;
+              document.getElementById('paperOrientation').value = lastPaperSettings.orient;
+              document.getElementById('customW').value = lastPaperSettings.customW;
+              document.getElementById('customH').value = lastPaperSettings.customH;
+              if (lastPaperSettings.size === 'custom') document.getElementById('customSizeRow').classList.remove('hidden');
+              else document.getElementById('customSizeRow').classList.add('hidden');
+              return; 
+          }
+          
+          if (choice === 'yes') {
+              const scaleX = newW / oldW;
+              const scaleY = newH / oldH;
+              const scaleFont = Math.min(scaleX, scaleY);
+              state.pages.forEach(page => {
+                  page.elements.forEach(el => {
+                      el.x *= scaleX; el.y *= scaleY; el.w *= scaleX; el.h *= scaleY;
+                      if (el.format && el.format.size) el.format.size = Math.max(8, Math.round(el.format.size * scaleFont));
+                      if (el.type === 'table' && el.cells) {
+                          el.cells.forEach(row => row.forEach(c => {
+                              if (c && c.format && c.format.size) c.format.size = Math.max(8, Math.round(c.format.size * scaleFont));
+                          }));
+                      }
+                  });
+              });
+          }
+      }
+
+      lastPaperSettings = { size: sizeStr, orient: orientStr, customW, customH };
+      localStorage.setItem('humbleNoteDefaultSize', sizeStr);
+      localStorage.setItem('humbleNoteOrientation', orientStr);
+      localStorage.setItem('humbleNoteCustomW', customW);
+      localStorage.setItem('humbleNoteCustomH', customH);
+
+      const customRow = document.getElementById('customSizeRow');
+      if (sizeStr === 'custom') customRow.classList.remove('hidden');
+      else customRow.classList.add('hidden');
+
+      state.paper.widthInches = newW;
+      state.paper.heightInches = newH;
+      state.orientation = orientStr;
+      
+      resizeCanvas(); applyZoom(); drawCanvas();
+      if (isUserAction) pushHistory();
+    }
+
+    function updateFont() { 
+      state.globalFont = document.getElementById('globalFont').value; 
+      localStorage.setItem('humbleNoteGlobalFont', state.globalFont);
+      drawCanvas(); 
+    }
+
+    function setZoom(level) { state.zoom = Math.max(0.25, Math.min(3.0, level)); applyZoom(); }
+    function fitToPage() { 
+      const sheet = getSheetSize();
+      setZoom(Math.min((viewport.clientWidth - 80) / sheet.w, (viewport.clientHeight - 80) / sheet.h)); 
+    }
+    function fitToWidth() { 
+      setZoom((viewport.clientWidth - 80) / getSheetSize().w); 
+    }
+    function applyZoom() {
+      document.getElementById('zoomLabel').innerText = Math.round(state.zoom * 100) + '%';
+      const sheet = getSheetSize();
+      canvas.style.width = (sheet.w * state.zoom) + "px";
+      canvas.style.height = (sheet.h * state.zoom) + "px";
+    }
+
+    viewport.addEventListener('wheel', e => {
+      if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(state.zoom + (e.deltaY > 0 ? -0.1 : 0.1)); }
+    }, { passive: false });
+
+    // Click outside canvas to deselect
+    viewport.addEventListener('pointerdown', function(evt) {
+        if (evt.target === viewport || evt.target.classList.contains('canvas-inner-wrapper')) {
+            if (state.selectedId) {
+                selectElement(null);
+                drawCanvas();
+            }
+        }
+    });
+
+    // --- Templates Modal Engine ---
+    let pendingTemplateType = null;
+    let editingTemplateId = null;
+    
+    // Globally attached to window for inline onclick handler mapping
+    window.renderBraceInputs = function(majorCount, existingSubparts = null) {
+       const count = parseInt(majorCount) || 1;
+       let html = `<div class="field-row"><label>Number of Major Parts</label><input type="number" id="cfgVal1" value="${count}" min="1" max="8" onchange="renderBraceInputs(this.value)"></div>`;
+       html += `<hr style="border:0; border-top:1px solid var(--card-border); margin: 6px 0;">`;
+       for(let i=1; i<=count; i++) {
+           const subVal = (existingSubparts && existingSubparts[i-1] !== undefined) ? existingSubparts[i-1] : 2;
+           html += `<div class="field-row"><label>Subparts for Major Part ${i}</label><input type="number" id="cfgBraceSub${i}" value="${subVal}" min="0" max="8"></div>`;
+       }
+       document.getElementById('tmInputs').innerHTML = html;
+    };
+
+    function closeTemplateModal() {
+       document.getElementById('templateModal').classList.add('hidden');
+       editingTemplateId = null;
+    }
+
+    function editCurrentTemplate() {
+       if (!state.selectedId) return;
+       const el = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
+       if (!el || !el.templateId) return;
+       editingTemplateId = el.templateId;
+       openTemplateConfig(el.templateType, el.templateCfg);
+    }
+
+    function openTemplateConfig(type, existingCfg = null) {
+      pendingTemplateType = type;
+      if (!existingCfg) editingTemplateId = null;
+      
+      const title = document.getElementById('tmTitle');
+      const inputs = document.getElementById('tmInputs');
+      inputs.innerHTML = ''; 
+      
+      if (type === 'bubble') {
+        const v = existingCfg ? existingCfg.val1 : 4;
+        title.innerText = 'Bubble Map Options';
+        inputs.innerHTML = `<div class="field-row"><label>Number of Details (Outer Bubbles)</label><input type="number" id="cfgVal1" value="${v}" min="2" max="12"></div>`;
+      } else if (type === 'double-bubble') {
+        const v1 = existingCfg ? existingCfg.val1 : 2;
+        const v2 = existingCfg ? existingCfg.val2 : 3;
+        const v3 = existingCfg ? existingCfg.val3 : 2;
+        title.innerText = 'Double Bubble Options';
+        inputs.innerHTML = `
+          <div class="field-row"><label>Left Unique Bubbles</label><input type="number" id="cfgVal1" value="${v1}" min="1" max="6"></div>
+          <div class="field-row"><label>Shared Bubbles (Center)</label><input type="number" id="cfgVal2" value="${v2}" min="1" max="8"></div>
+          <div class="field-row"><label>Right Unique Bubbles</label><input type="number" id="cfgVal3" value="${v3}" min="1" max="6"></div>`;
+      } else if (type === 'flow') {
+        const v = existingCfg ? existingCfg.val1 : 4;
+        title.innerText = 'Flow Map Options';
+        inputs.innerHTML = `<div class="field-row"><label>Number of Sequential Steps</label><input type="number" id="cfgVal1" value="${v}" min="2" max="10"></div>`;
+      } else if (type === 'cycle') {
+        const v = existingCfg ? existingCfg.val1 : 4;
+        title.innerText = 'Cyclical Map Options';
+        inputs.innerHTML = `<div class="field-row"><label>Number of Stages</label><input type="number" id="cfgVal1" value="${v}" min="3" max="10"></div>`;
+      } else if (type === 'tree') {
+        const v = existingCfg ? existingCfg.val1 : 3;
+        title.innerText = 'Tree Map Options';
+        inputs.innerHTML = `<div class="field-row"><label>Number of Subtopics</label><input type="number" id="cfgVal1" value="${v}" min="2" max="8"></div>`;
+      } else if (type === 'brace') {
+        title.innerText = 'Brace Map Options';
+        window.renderBraceInputs(existingCfg ? existingCfg.val1 : 3, existingCfg ? existingCfg.subparts : null);
+      } else if (type === 'storyboard') {
+        const v1 = existingCfg ? existingCfg.val1 : 3;
+        const v2 = existingCfg ? existingCfg.val2 : 2;
+        title.innerText = 'Storyboard Grid Options';
+        inputs.innerHTML = `
+          <div class="field-row"><label>Rows</label><input type="number" id="cfgVal1" value="${v1}" min="1" max="10"></div>
+          <div class="field-row"><label>Columns</label><input type="number" id="cfgVal2" value="${v2}" min="1" max="10"></div>`;
+      }
+      
+      document.getElementById('templateModal').classList.remove('hidden');
+    }
+
+    function confirmTemplate() {
+      const cfg = {};
+      if (pendingTemplateType === 'brace') {
+         const major = parseInt(document.getElementById('cfgVal1').value) || 3;
+         cfg.val1 = major;
+         cfg.subparts = [];
+         for(let i=1; i<=major; i++) {
+             const subVal = document.getElementById('cfgBraceSub'+i);
+             cfg.subparts.push(subVal ? (parseInt(subVal.value) || 0) : 0);
+         }
+      } else {
+         const c1 = document.getElementById('cfgVal1');
+         const c2 = document.getElementById('cfgVal2');
+         const c3 = document.getElementById('cfgVal3');
+         if (c1) cfg.val1 = parseInt(c1.value);
+         if (c2) cfg.val2 = parseInt(c2.value);
+         if (c3) cfg.val3 = parseInt(c3.value);
+      }
+      
+      document.getElementById('templateModal').classList.add('hidden');
+      
+      if (editingTemplateId) {
+         const page = state.pages[state.currentPageIndex];
+         const oldEls = page.elements.filter(e => e.templateId === editingTemplateId);
+         page.elements = page.elements.filter(e => e.templateId !== editingTemplateId);
+         loadTemplate(pendingTemplateType, cfg, editingTemplateId, oldEls);
+         editingTemplateId = null;
+      } else {
+         loadTemplate(pendingTemplateType, cfg);
+      }
+    }
+
+    // --- Template Generation Core ---
+    function buildCells(oldCells, rows, cols) {
+      const newCells = [];
+      for (let r=0; r<rows; r++) {
+        const newRow = [];
+        for (let c=0; c<cols; c++) {
+          if (oldCells && oldCells[r] && oldCells[r][c]) newRow.push(oldCells[r][c]);
+          else newRow.push({ text: '', format: null });
+        }
+        newCells.push(newRow);
+      }
+      return newCells;
+    }
+
+    function cloneElementData(el) {
+       return JSON.parse(JSON.stringify(el)); // images are shared by imageId, so a plain copy is enough
+    }
+
+    // Element that anchors each dynamic organizer's position when its structure is edited
+    const TEMPLATE_ANCHOR_ROLE = { 'bubble': 'center', 'double-bubble': 'mainL', 'flow': 'step-0', 'storyboard': 'draw-0-0', 'cycle': 'stage-0', 'tree': 'top', 'brace': 'whole' };
+    const TEMPLATE_KEPT_FIELDS = ['text', 'label', 'labelAlign', 'format', 'bgStyle', 'lineSize', 'gridSize', 'showBorder', 'borderStyle', 'borderWidth'];
+
+    function loadTemplate(type, cfg = null, existingId = null, oldEls = []) {
+      const startIndex = state.pages[state.currentPageIndex].elements.length;
+      const tId = existingId || generateId();
+      const push = (role, obj) => { obj.role = role; state.pages[state.currentPageIndex].elements.push(obj); };
+
+      const m = 0.25 * DPI; 
+      
+      // Dynamic margin check to start templates BELOW any placed page titles/numbers
+      let mTop = m;
+      const headerEls = state.pages[state.currentPageIndex].elements.filter(e => e.y < m + 50); 
+      if (headerEls.length > 0) {
+         mTop = Math.max(...headerEls.map(e => e.y + e.h)) + 15; // 15px gap below titles
+      }
+
+      const safeW = (state.paper.widthInches * DPI) - (m*2);
+      const safeH = (state.paper.heightInches * DPI) - mTop - m;
+      const lSz = getDefaultLineSize();
+      const gSz = getDefaultGridSize();
+
+      // Advanced Auto-Flipping Smart Connector
+      const addConnector = (x1, y1, x2, y2, aType = 'none') => {
+         const minX = Math.min(x1, x2); const minY = Math.min(y1, y2);
+         const w = Math.max(20, Math.abs(x2 - x1)); const h = Math.max(20, Math.abs(y2 - y1));
+         
+         let lType = 'horizontal'; let flip = false;
+         if (Math.abs(x2 - x1) < 20) { lType = 'vertical'; flip = y2 < y1; } 
+         else if (Math.abs(y2 - y1) < 20) { lType = 'horizontal'; flip = x2 < x1; } 
+         else if ((x1 < x2 && y1 < y2)) { lType = 'diag-down'; flip = false; }
+         else if ((x1 > x2 && y1 > y2)) { lType = 'diag-down'; flip = true; }
+         else if ((x1 < x2 && y1 > y2)) { lType = 'diag-up'; flip = false; }
+         else if ((x1 > x2 && y1 < y2)) { lType = 'diag-up'; flip = true; }
+         
+         state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'line', x: minX, y: minY, w: w, h: h, lineType: lType, arrowType: aType, flipLine: flip, showBorder: false, borderWidth: 2, borderStyle: 'solid' });
+      };
+
+      if (type === 'cornell') {
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: safeW, h: safeH * 0.1, label: 'Topic / Objective:', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + safeH * 0.1 + 15, w: safeW * 0.3 - 5, h: safeH * 0.7 - 30, label: 'Questions / Cues:', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW * 0.3 + 5, y: mTop + safeH * 0.1 + 15, w: safeW * 0.7 - 5, h: safeH * 0.7 - 30, label: 'Notes:', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + safeH * 0.8, w: safeW, h: safeH * 0.2, label: 'Summary:', labelAlign: 'left', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+      
+      } else if (type === 'frayer') {
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: safeW/2, h: safeH/2, label: 'Definition', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: mTop, w: safeW/2, h: safeH/2, label: 'Characteristics', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + safeH/2, w: safeW/2, h: safeH/2, label: 'Examples', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW/2, y: mTop + safeH/2, w: safeW/2, h: safeH/2, label: 'Non-Examples', labelAlign: 'right', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        const cw = 220, ch = 80;
+        let cFormat = defaultFormat(); cFormat.align = 'center'; cFormat.valign = 'middle';
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW/2 - cw/2, y: mTop + safeH/2 - ch/2, w: cw, h: ch, label: 'Topic / Word', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFormat });
+      
+      } else if (type === 'vocab') {
+        const col1W = safeW * 0.35;
+        const col2W = safeW * 0.65;
+        let cFmt = defaultFormat(); cFmt.align = 'center'; cFmt.size = 14; cFmt.bold = true;
+        
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: col1W, h: 40, label: '', text: 'Term', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + col1W, y: mTop, w: col2W, h: 40, label: '', text: 'Definition', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + 40, w: col1W, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + col1W, y: mTop + 40, w: col2W, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+
+      } else if (type === 'lab') {
+        const col1W = safeW * (392/552); 
+        const col2W = safeW * (136/552); 
+        const leftX = m + (safeW * (8/552)); 
+        const rightX = m + (safeW * (408/552));
+        
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: leftX, y: mTop, w: col1W, h: safeH * (72/703), label: 'Question / Purpose', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop, w: col2W, h: safeH * (72/703), label: 'Variables', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (88/703), w: safeW * (135/552), h: safeH * (99/703), label: 'Hypothesis', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: leftX, y: mTop + safeH * (88/703), w: col1W, h: safeH * (615/703), label: 'Procedure & Data', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (208/703), w: col2W, h: safeH * (224/703), label: 'Observations', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (451/703), w: safeW * (135/552), h: safeH * (153/703), label: 'Analysis', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: rightX, y: mTop + safeH * (622/703), w: safeW * (135/552), h: safeH * (81/703), label: 'Conclusion', labelAlign: 'left', text: '', bgStyle: 'none', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+
+      } else if (type === 'kwl') {
+        const colW = safeW / 3;
+        let cFmt = defaultFormat(); cFmt.align = 'center';
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: colW, h: safeH, label: 'What I Know (K)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + colW, y: mTop, w: colW, h: safeH, label: 'What I Wonder (W)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + (colW * 2), y: mTop, w: colW, h: safeH, label: 'What I Learned (L)', labelAlign: 'center', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+      
+      } else if (type === 'tchart') {
+        const halfW = safeW / 2;
+        let cFmt = defaultFormat(); cFmt.align = 'center'; cFmt.size = 14; cFmt.bold = true;
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop, w: halfW, h: 40, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + halfW, y: mTop, w: halfW, h: 40, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: cFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m, y: mTop + 40, w: halfW, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + halfW, y: mTop + 40, w: halfW, h: safeH - 40, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+
+      } else if (type === 'venn') {
+        const rW = safeW * 0.6; const rH = safeH * 0.5; const yPos = mTop + (safeH * 0.25);
+        let tFmt = defaultFormat(); tFmt.align = 'center'; tFmt.bold = true; tFmt.size = 14;
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: m + (safeW * 0.05), y: yPos, w: rW, h: rH, text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'ellipse', x: m + (safeW * 0.35), y: yPos, w: rW, h: rH, text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'text', x: m + (safeW * 0.05), y: yPos + 20, w: rW, h: 30, text: '', showBorder: false, format: tFmt });
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'text', x: m + (safeW * 0.35), y: yPos + 20, w: rW, h: 30, text: '', showBorder: false, format: tFmt });
+      
+      } else if (type === 'bubble') {
+        const n = cfg?.val1 || 4;
+        const cX = m + safeW/2; const cY = mTop + safeH/2;
+        const cW = 160; const cH = 100;
+        const oW = 120; const oH = 80;
+        const rad = Math.min(safeW, safeH) * 0.35;
+        
+        for(let i=0; i<n; i++) {
+            const angle = (i/n) * 2 * Math.PI - (Math.PI/2);
+            const bx = cX + rad * Math.cos(angle); const by = cY + rad * Math.sin(angle);
+            addConnector(cX, cY, bx, by, 'none');
+            push(`detail-${i}`, { id: generateId(), type: 'ellipse', x: bx - oW/2, y: by - oH/2, w: oW, h: oH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+        }
+        push('center', { id: generateId(), type: 'ellipse', x: cX - cW/2, y: cY - cH/2, w: cW, h: cH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+      
+      } else if (type === 'double-bubble') {
+        const leftCount = cfg?.val1 || 2;
+        const sharedCount = cfg?.val2 || 3;
+        const rightCount = cfg?.val3 || 2;
+        
+        const mainW = 140; const mainH = 140; const subW = 100; const subH = 100;
+        const cY = mTop + safeH/2; const lX = m + safeW*0.3; const rX = m + safeW*0.7;
+
+        const sGap = safeH / (sharedCount + 1);
+        for(let i=0; i<sharedCount; i++) {
+            const my = mTop + sGap + (i * sGap);
+            addConnector(lX, cY, m + safeW/2, my, 'none'); addConnector(rX, cY, m + safeW/2, my, 'none');
+            push(`shared-${i}`, { id: generateId(), type: 'ellipse', x: m + safeW/2 - subW/2, y: my - subH/2, w: subW, h: subH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+        }
+
+        const lGap = safeH / (leftCount + 1);
+        for(let i=0; i<leftCount; i++) {
+            const ly = mTop + lGap + (i * lGap);
+            addConnector(m + safeW*0.1, ly, lX, cY, 'none');
+            push(`left-${i}`, { id: generateId(), type: 'ellipse', x: m + safeW*0.1 - subW/2, y: ly - subH/2, w: subW, h: subH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+        }
+        
+        const rGap = safeH / (rightCount + 1);
+        for(let i=0; i<rightCount; i++) {
+            const ry = mTop + rGap + (i * rGap);
+            addConnector(rX, cY, m + safeW*0.9, ry, 'none');
+            push(`right-${i}`, { id: generateId(), type: 'ellipse', x: m + safeW*0.9 - subW/2, y: ry - subH/2, w: subW, h: subH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+        }
+
+        push('mainL', { id: generateId(), type: 'ellipse', x: lX - mainW/2, y: cY - mainH/2, w: mainW, h: mainH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        push('mainR', { id: generateId(), type: 'ellipse', x: rX - mainW/2, y: cY - mainH/2, w: mainW, h: mainH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+
+      } else if (type === 'flow') {
+        const n = cfg?.val1 || 4;
+        let boxW = Math.min(160, safeW / (1.5 * n - 0.5));
+        const boxH = safeH * 0.15; const gap = boxW * 0.5;
+        const totalW = (boxW * n) + (gap * (n-1));
+        const startX = m + (safeW - totalW)/2;
+        const startY = mTop + (safeH / 2) - (boxH / 2);
+
+        for(let i=0; i<n; i++) {
+            const bX = startX + (i * (boxW + gap));
+            push(`step-${i}`, { id: generateId(), type: 'box', x: bX, y: startY, w: boxW, h: boxH, label: '', labelAlign: 'left', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+            if(i < n-1) { addConnector(bX + boxW, startY + boxH/2, bX + boxW + gap, startY + boxH/2, 'end'); }
+        }
+
+      } else if (type === 'storyboard') {
+        const rows = cfg?.val1 || 3; const cols = cfg?.val2 || 2;
+        const gapX = 20; const gapY = 20;
+        const cellW = (safeW - (gapX * (cols-1))) / cols;
+        const cellH = (safeH - (gapY * (rows-1))) / rows;
+        const drawH = cellH * 0.7; const textH = cellH * 0.3;
+
+        for(let r=0; r<rows; r++) {
+            for(let c=0; c<cols; c++) {
+                const sX = m + (c * (cellW + gapX));
+                const sY = mTop + (r * (cellH + gapY));
+                push(`draw-${r}-${c}`, { id: generateId(), type: 'box', x: sX, y: sY, w: cellW, h: drawH, label: '', labelAlign: 'left', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+                push(`text-${r}-${c}`, { id: generateId(), type: 'box', x: sX, y: sY + drawH, w: cellW, h: textH, label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+            }
+        }
+
+      } else if (type === 'cycle') {
+        const n = cfg?.val1 || 4;
+        const cX = m + safeW/2; const cY = mTop + safeH/2;
+        const bW = 120; const bH = 80;
+        const rad = Math.min(safeW, safeH) * 0.35;
+        
+        const pos = [];
+        for(let i=0; i<n; i++) {
+            const angle = (i/n) * 2 * Math.PI - (Math.PI/2);
+            pos.push({x: cX + rad * Math.cos(angle), y: cY + rad * Math.sin(angle)});
+        }
+        
+        for(let i=0; i<n; i++) { addConnector(pos[i].x, pos[i].y, pos[(i+1)%n].x, pos[(i+1)%n].y, 'end'); }
+        for(let i=0; i<n; i++) {
+            push(`stage-${i}`, { id: generateId(), type: 'ellipse', x: pos[i].x - bW/2, y: pos[i].y - bH/2, w: bW, h: bH, text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+        }
+
+      } else if (type === 'tree') {
+        const n = cfg?.val1 || 3;
+        const boxW = Math.min(200, (safeW - (20 * (n-1))) / n); 
+        const boxH = 50; const cX = m + safeW/2;
+        
+        push('top', { id: generateId(), type: 'box', x: cX - boxW/2, y: mTop, w: boxW, h: boxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        addConnector(cX, mTop + boxH, cX, mTop + boxH + 40, 'none');
+        
+        const barY = mTop + boxH + 40;
+        const gap = (safeW - (boxW * n)) / (n > 1 ? n - 1 : 1);
+        
+        if (n > 1) { addConnector(m + boxW/2, barY, m + safeW - boxW/2, barY, 'none'); }
+
+        for(let i=0; i<n; i++) {
+            const xPos = n === 1 ? cX : m + boxW/2 + (i * (boxW + gap));
+            addConnector(xPos, barY, xPos, barY + 30, 'none');
+            push(`sub-${i}`, { id: generateId(), type: 'box', x: xPos - boxW/2, y: barY + 30, w: boxW, h: boxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            push(`subbody-${i}`, { id: generateId(), type: 'box', x: xPos - boxW/2, y: barY + 30 + boxH + 20, w: boxW, h: Math.max(40, mTop + safeH - (barY + 30 + boxH + 20)), label: '', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        }
+
+      } else if (type === 'brace') {
+        const majorN = cfg?.val1 || 3;
+        const subpartsArr = cfg?.subparts || [2, 2, 2];
+        const col1X = m; const col1W = safeW * 0.2; const col2X = m + safeW * 0.35; const col2W = safeW * 0.25; const col3X = m + safeW * 0.7; const col3W = safeW * 0.3;
+        const bH = Math.min(60, safeH / (majorN * 2)); const cY = mTop + safeH/2;
+
+        push('whole', { id: generateId(), type: 'box', x: col1X, y: cY - bH/2, w: col1W, h: bH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+        
+        const majorGap = safeH / majorN;
+        for(let i=0; i<majorN; i++) {
+            const py = mTop + (majorGap / 2) + (i * majorGap);
+            addConnector(col1X + col1W, cY, col2X, py, 'none');
+            push(`major-${i}`, { id: generateId(), type: 'box', x: col2X, y: py - bH/2, w: col2W, h: bH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            
+            const minorN = subpartsArr[i] || 0;
+            if (minorN > 0) {
+               const minorGap = majorGap / minorN;
+               for(let j=0; j<minorN; j++) {
+                   const spy = py - (majorGap/2) + (minorGap/2) + (j * minorGap);
+                   addConnector(col2X + col2W, py, col3X, spy, 'none');
+                   push(`minor-${i}-${j}`, { id: generateId(), type: 'box', x: col3X, y: spy - bH/3, w: col3W, h: bH*0.66, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 10, align: 'left', valign: 'middle' } });
+               }
+            }
+        }
+
+      } else if (type === 'fishbone') {
+        const cY = mTop + safeH/2; const headW = 140; const headH = 80;
+        
+        addConnector(m + 40, cY, m + safeW - headW, cY, 'end'); 
+        const bWs = [m + safeW*0.25, m + safeW*0.5, m + safeW*0.75]; const boneH = safeH * 0.35; const boneBoxW = 120; const boneBoxH = 50;
+
+        bWs.forEach(bx => {
+            addConnector(bx - boneBoxW/2, cY - boneH + boneBoxH, bx, cY, 'none');
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: bx - boneBoxW, y: cY - boneH, w: boneBoxW, h: boneBoxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+            
+            addConnector(bx - boneBoxW/2, cY + boneH - boneBoxH, bx, cY, 'none');
+            state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: bx - boneBoxW, y: cY + boneH - boneBoxH, w: boneBoxW, h: boneBoxH, label: '', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 12, align: 'center', valign: 'middle' } });
+        });
+
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW - headW + 10, y: cY - headH/2, w: headW - 10, h: headH, label: '', text: '', bgStyle: 'solid', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+
+      } else if (type === 'concept') {
+        const cX = m + safeW/2; const cY = mTop + safeH/2; const bW = safeW * 0.25; const bH = 60;
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: cY - bH/2, w: bW, h: bH, label: 'Main Concept', text: '', bgStyle: 'none', showBorder: true, borderWidth: 3, borderStyle: 'solid', format: { size: 14, align: 'center', valign: 'middle', bold: true } });
+        addConnector(cX, mTop + bH, cX, cY - bH/2, 'end');
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: cX - bW/2, y: mTop, w: bW, h: bH, label: 'Detail', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        addConnector(cX + bW/2, cY, m + safeW - bW, cY, 'end');
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: m + safeW - bW, y: cY - bH, w: bW, h: bH*2, label: 'Detail / Example', text: '', bgStyle: 'lines', lineSize: lSz, gridSize: gSz, showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+        addConnector(cX, cY + bH/2, cX, mTop + safeH - bH*1.5, 'end');
+        const exW = safeW * 0.8;
+        state.pages[state.currentPageIndex].elements.push({ id: generateId(), type: 'box', x: cX - exW/2, y: mTop + safeH - bH*1.5, w: exW, h: bH*1.5, label: 'Synthesis / Summary', text: '', bgStyle: 'none', showBorder: true, borderWidth: 2, borderStyle: 'solid', format: defaultFormat() });
+      }
+
+      // Final processing: tag elements to this template group
+      const newEls = state.pages[state.currentPageIndex].elements.slice(startIndex);
+      newEls.forEach(el => { el.templateId = tId; el.templateType = type; el.templateCfg = cfg; });
+
+      // When editing an existing organizer, carry over its content, styling and position
+      if (oldEls.length > 0) {
+         const oldByRole = {};
+         oldEls.forEach(e => { if (e.role) oldByRole[e.role] = e; });
+         const hasRoles = Object.keys(oldByRole).length > 0;
+         const oldShapes = oldEls.filter(e => e.type !== 'line');
+         let shapeIndex = 0;
+
+         newEls.forEach(el => {
+            if (el.type === 'line') return;
+            const old = hasRoles ? oldByRole[el.role] : oldShapes[shapeIndex++]; // older files have no roles
+            if (!old) return;
+            TEMPLATE_KEPT_FIELDS.forEach(f => { if (old[f] !== undefined) el[f] = JSON.parse(JSON.stringify(old[f])); });
+         });
+
+         const anchorRole = TEMPLATE_ANCHOR_ROLE[type];
+         const oldAnchor = oldByRole[anchorRole];
+         const newAnchor = newEls.find(e => e.role === anchorRole);
+         if (oldAnchor && newAnchor) {
+            const dx = oldAnchor.x - newAnchor.x, dy = oldAnchor.y - newAnchor.y;
+            newEls.forEach(el => { el.x += dx; el.y += dy; });
+         }
+      }
+
+      selectElement(null); drawCanvas(); pushHistory();
+    }
+
+    function addElement(type) {
+      const el = { id: generateId(), type: type, x: 100, y: 100, format: defaultFormat(), showBorder: true, borderWidth: 2, borderStyle: 'solid' };
+      if (type === 'box') { el.w = 300; el.h = 150; el.label = ""; el.labelAlign = "left"; el.bgStyle = "none"; el.lineSize = getDefaultLineSize(); el.gridSize = getDefaultGridSize(); el.text = ""; } 
+      else if (type === 'ellipse') { el.w = 150; el.h = 150; el.text = ""; el.bgStyle = "solid"; }
+      else if (type === 'line') { el.w = 150; el.h = 40; el.lineType = "horizontal"; el.arrowType = "none"; el.flipLine = false; el.showBorder = false; el.text = ""; }
+      else if (type === 'text') { el.w = 300; el.h = 30; el.showBorder = false; el.text = ""; }
+      else if (type === 'table') { 
+        el.w = 300; el.h = 150; el.rows = 3; el.cols = 3; 
+        el.customCols = false;
+        el.colRatios = [0.333, 0.333, 0.334];
+        el.format.align = 'center'; el.format.valign = 'middle';
+        el.cells = buildCells(null, 3, 3); 
+        for(let c=0; c<3; c++) { el.cells[0][c].text = "<b>Header</b>"; }
+      }
+      state.pages[state.currentPageIndex].elements.push(el); state.selectedCell = {r:0, c:0}; selectElement(el.id); drawCanvas(); pushHistory();
+    }
+
+    function addPageTitle() {
+      const type = document.querySelector('input[name="ptType"]:checked').value;
+      const align = document.querySelector('input[name="ptAlign"]:checked').value;
+      
+      const m = 0.25 * DPI; // Safe margin
+      const pageW = state.paper.widthInches * DPI;
+      
+      const pnW = 0.75 * DPI; // 0.75" wide (Wide enough for "Pg. " and 3 digits)
+      const pnH = 30;         // Just high enough for one line
+      const tH = 30;          // Just high enough for one line
+      
+      const y = m; // Top of the page
+      
+      let pFormat = defaultFormat(); 
+      pFormat.size = 10; pFormat.bold = true; pFormat.align = 'center'; pFormat.valign = 'middle';
+      
+      let tFormat = defaultFormat(); 
+      tFormat.size = 12; tFormat.italic = true; tFormat.valign = 'middle';
+      tFormat.align = align === 'left' ? 'left' : 'right';
+
+      if (type === 'number') {
+        const x = align === 'left' ? m : pageW - m - pnW;
+        const el = { id: generateId(), type: 'box', x: x, y: y, w: pnW, h: pnH, text: "Pg.&nbsp;", label: "", bgStyle: "none", showBorder: false, borderWidth: 1, borderStyle: 'solid', format: pFormat };
+        state.pages[state.currentPageIndex].elements.push(el);
+        selectElement(el.id);
+      } else if (type === 'title') {
+        const tW = pageW - (2 * m); // Take up remaining width to both borders
+        const x = m; 
+        const el = { id: generateId(), type: 'box', x: x, y: y, w: tW, h: tH, text: "Title", label: "", bgStyle: "none", showBorder: false, borderWidth: 1, borderStyle: 'solid', format: tFormat };
+        state.pages[state.currentPageIndex].elements.push(el);
+        selectElement(el.id);
+      } else if (type === 'both') {
+        const tW = pageW - (2 * m) - pnW; // Remaining width after page number
+        let pnX, tX;
+        
+        if (align === 'left') {
+          pnX = m;
+          tX = m + pnW;
+        } else {
+          pnX = pageW - m - pnW;
+          tX = m; 
+          pFormat.align = 'left'; 
+        }
+        
+        const elNum = { id: generateId(), type: 'box', x: pnX, y: y, w: pnW, h: pnH, text: "Pg.&nbsp;", label: "", bgStyle: "none", showBorder: false, borderWidth: 1, borderStyle: 'solid', format: pFormat };
+        const elTitle = { id: generateId(), type: 'box', x: tX, y: y, w: tW, h: tH, text: "Title", label: "", bgStyle: "none", showBorder: false, borderWidth: 1, borderStyle: 'solid', format: tFormat };
+        
+        state.pages[state.currentPageIndex].elements.push(elNum);
+        state.pages[state.currentPageIndex].elements.push(elTitle);
+        selectElement(elNum.id);
+      }
+      
+      drawCanvas(); 
+      pushHistory();
+    }
+
+    function handleImageUpload(e) {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          // Very large photos are scaled down (still well above 300 DPI at page size) to keep files small
+          const MAX_SIDE = 2400;
+          const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
+          const cvs = document.createElement('canvas');
+          cvs.width = Math.round(img.width * scale); cvs.height = Math.round(img.height * scale);
+          cvs.getContext('2d').drawImage(img, 0, 0, cvs.width, cvs.height);
+          const isPhoto = /jpe?g/i.test(file.type);
+          const dataURL = isPhoto ? cvs.toDataURL('image/jpeg', 0.92) : cvs.toDataURL('image/png');
+          
+          const el = { 
+            id: generateId(), type: 'image', x: 100, y: 100, 
+            w: 300, h: 300 * (img.height / img.width), 
+            imageId: storeImage(dataURL), showBorder: false, borderWidth: 2, borderStyle: 'solid',
+            aspectLocked: true, originalRatio: img.width / img.height, rotation: 0
+          };
+          
+          state.pages[state.currentPageIndex].elements.push(el); selectElement(el.id); drawCanvas(); pushHistory();
+        }
+        img.onerror = function() { alert("That image couldn't be opened. Try a PNG or JPG file."); };
+        img.src = event.target.result;
+      }
+      reader.readAsDataURL(file); e.target.value = '';
+    }
+
+    function clearCanvas() {
+      if (state.pages[state.currentPageIndex].elements.length === 0) return;
+      if (!confirm("Remove every element from this page? (You can undo this.)")) return;
+      state.pages[state.currentPageIndex].elements = []; selectElement(null); drawCanvas(); pushHistory();
+    }
+
+    // --- Rich Text Editing Engine ---
+    let savedTextRange = null;
+    document.addEventListener('selectionchange', function() {
+        const editor = document.getElementById('propText');
+        const sel = window.getSelection();
+        if (editor && sel.rangeCount && editor.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+            savedTextRange = sel.getRangeAt(0).cloneRange();
+        }
+    });
+
+    function focusEditor() {
+        const editor = document.getElementById('propText');
+        editor.focus();
+        if (savedTextRange && editor.contains(savedTextRange.commonAncestorContainer)) {
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(savedTextRange);
+        }
+    }
+
+    function execCmd(command, value=null) {
+        focusEditor();
+        document.execCommand(command, false, value);
+        updateSelectedElement();
+    }
+
+    function insertList(marker) {
+        focusEditor();
+        document.execCommand('insertText', false, marker);
+        updateSelectedElement();
+        pushHistory();
+    }
+
+    function insertChar(char) {
+        focusEditor();
+        document.execCommand('insertText', false, char);
+        updateSelectedElement(); 
+        pushHistory(); 
+        closeAllDropdowns();
+    }
+
+    function toggleDropdown(id) {
+      const menu = document.getElementById(id);
+      const isOpen = menu.classList.contains('open');
+      closeAllDropdowns();
+      if (!isOpen) menu.classList.add('open');
+    }
+
+    function closeAllDropdowns() { document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open')); }
+
+    document.addEventListener('click', function(e) { if (!e.target.closest('.dropdown-custom')) closeAllDropdowns(); });
+
+    document.getElementById('propText').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return;
+        
+        const node = sel.focusNode;
+        if (!node) return;
+        
+        let textBeforeCaret = "";
+        if (node.nodeType === 3) {
+          textBeforeCaret = node.nodeValue.substring(0, sel.focusOffset);
+        } else {
+          textBeforeCaret = node.textContent.substring(0, sel.focusOffset);
+        }
+        
+        const match = textBeforeCaret.match(/^([•☐])(\s+)(.*)$/) || textBeforeCaret.match(/^(\d+|[IVXivx]+|[A-Za-z])(\.\s+)(.*)$/);
+        
+        if (match) {
+          e.preventDefault();
+          const m = match[1];
+          const sep = match[2];
+          const content = match[3];
+
+          if (content.trim() === '') {
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            document.execCommand('delete', false);
+            document.execCommand('insertHTML', false, '<br>');
+          } else {
+            let nextMarker = m;
+            if (m === '•' || m === '☐') nextMarker = m;
+            else if (/^\d+$/.test(m)) nextMarker = (parseInt(m) + 1).toString();
+            else {
+              const rU = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+              const rL = ['i','ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii'];
+              if (rU.includes(m)) nextMarker = rU[rU.indexOf(m)+1] || m;
+              else if (rL.includes(m)) nextMarker = rL[rL.indexOf(m)+1] || m;
+              else if (/^[A-Z]$/.test(m)) nextMarker = String.fromCharCode(m.charCodeAt(0) + 1);
+              else if (/^[a-z]$/.test(m)) nextMarker = String.fromCharCode(m.charCodeAt(0) + 1);
+            }
+            
+            document.execCommand('insertHTML', false, '<br>' + nextMarker + sep.replace(/ /g, '&nbsp;'));
+          }
+          updateSelectedElement();
+          pushHistory();
+        }
+      }
+    });
+
+    // Rich text pasted from Word/web pages comes in as plain text
+    document.getElementById('propText').addEventListener('paste', function(e) {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+      updateSelectedElement();
+    });
+
+    function getSelectedEls() {
+      return state.pages[state.currentPageIndex].elements.filter(e => state.selectedIds.includes(e.id));
+    }
+
+    function isModalOpen() {
+      return !document.getElementById('scaleModal').classList.contains('hidden') || !document.getElementById('templateModal').classList.contains('hidden');
+    }
+
+    function copySelection() {
+      const els = getSelectedEls();
+      if (els.length) clipboardData = els.map(cloneElementData);
+      return els.length > 0;
+    }
+
+    function pasteElements(sourceEls) {
+      if (!sourceEls || !sourceEls.length) return;
+      const pasted = sourceEls.map(src => {
+        const el = cloneElementData(src);
+        el.id = generateId();
+        el.x += 20; el.y += 20;
+        // A copy is a stand-alone element, not part of the original organizer
+        delete el.templateId; delete el.templateType; delete el.templateCfg; delete el.role;
+        state.pages[state.currentPageIndex].elements.push(el);
+        return el;
+      });
+      selectElement(pasted[pasted.length - 1].id, pasted.map(e => e.id));
+      drawCanvas();
+      pushHistory();
+      return pasted;
+    }
+
+    let nudgePending = false;
+
+    document.addEventListener('keydown', function(e) {
+      const cmdCtrl = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      const active = document.activeElement;
+      const tag = active ? active.tagName.toLowerCase() : '';
+      const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || (active && active.isContentEditable);
+
+      // Save works everywhere, even while typing
+      if (cmdCtrl && key === 's') { e.preventDefault(); saveProject(); return; }
+
+      if (e.key === 'Escape') {
+        if (!document.getElementById('scaleModal').classList.contains('hidden')) { resolveScaleModal('cancel'); return; }
+        if (!document.getElementById('templateModal').classList.contains('hidden')) { closeTemplateModal(); return; }
+        if (document.querySelector('.dropdown-menu.open')) { closeAllDropdowns(); return; }
+        if (isTyping && active.id !== 'propText') { active.blur(); return; }
+        if (active && active.id === 'propText') { active.blur(); pushHistory(); }
+        if (state.selectedId) { selectElement(null); drawCanvas(); }
+        return;
+      }
+
+      if (isTyping || isModalOpen()) return;
+
+      if (cmdCtrl && key === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+      if (cmdCtrl && key === 'y') { e.preventDefault(); redo(); return; }
+
+      if (cmdCtrl && key === 'a') {
+        e.preventDefault();
+        const els = state.pages[state.currentPageIndex].elements;
+        if (els.length) { selectElement(els[els.length - 1].id, els.map(el => el.id)); drawCanvas(); }
+        return;
+      }
+
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (state.selectedIds.length) { e.preventDefault(); deleteSelected(); }
+        return;
+      }
+
+      if (cmdCtrl && key === 'c') { copySelection(); return; }
+      if (cmdCtrl && key === 'x') { if (copySelection()) deleteSelected(); return; }
+      if (cmdCtrl && key === 'v') {
+        if (clipboardData) {
+          pasteElements(clipboardData);
+          clipboardData.forEach(el => { el.x += 20; el.y += 20; }); // next paste steps further down
+        }
+        return;
+      }
+      if (cmdCtrl && key === 'd') { e.preventDefault(); pasteElements(getSelectedEls()); return; }
+
+      const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+      if (arrows[e.key] && state.selectedIds.length) {
+        e.preventDefault();
+        let step = e.shiftKey ? 10 : 1;
+        if (document.getElementById('snapGrid').checked) step = state.snapSize;
+        getSelectedEls().forEach(el => { el.x += arrows[e.key][0] * step; el.y += arrows[e.key][1] * step; });
+        nudgePending = true;
+        drawCanvas();
+      }
+    });
+
+    // One undo step per arrow-key nudge, not per repeated keypress
+    document.addEventListener('keyup', function(e) {
+      if (nudgePending && e.key.startsWith('Arrow')) { nudgePending = false; pushHistory(); }
+    });
+
+    // --- Properties Control ---
+    function getActiveText(el) {
+      if (el.type === 'table') {
+         if (state.selectedCell.r < el.rows && state.selectedCell.c < el.cols) {
+            return el.cells[state.selectedCell.r][state.selectedCell.c].text || "";
+         }
+         return "";
+      }
+      return el.text || "";
+    }
+
+    function setActiveText(el, val) {
+      if (el.type === 'table') {
+         if (state.selectedCell.r < el.rows && state.selectedCell.c < el.cols) {
+            el.cells[state.selectedCell.r][state.selectedCell.c].text = val;
+         }
+      } else { el.text = val; }
+    }
+
+    // Selects one element (or a group, when groupIds is given). The primary element
+    // `id` is the one shown in the properties panel.
+    function selectElement(id, groupIds = null) {
+      const isNewSelection = id !== state.selectedId;
+      state.selectedId = id;
+      if (!id) state.selectedIds = [];
+      else state.selectedIds = (groupIds && groupIds.includes(id)) ? groupIds.slice() : [id];
+      refreshPropPanel(isNewSelection);
+    }
+
+    function refreshPropPanel(scrollIntoView = false) {
+      const id = state.selectedId;
+      const propPanel = document.getElementById('propPanel');
+
+      if (!id) { propPanel.classList.add('hidden'); return; }
+
+      const el = state.pages[state.currentPageIndex].elements.find(e => e.id === id);
+      if (!el) { propPanel.classList.add('hidden'); return; }
+
+      propPanel.classList.remove('hidden');
+      if (scrollIntoView) document.getElementById('controls-panel').scrollTop = 0;
+
+      const multiNote = document.getElementById('multiSelectNote');
+      if (state.selectedIds.length > 1) {
+        multiNote.classList.remove('hidden');
+        multiNote.innerText = `${state.selectedIds.length} elements selected. Dragging, arrow keys, copy and delete apply to all of them; the settings below apply to the one outlined in solid blue.`;
+      } else {
+        multiNote.classList.add('hidden');
+      }
+
+      if (el.format && !el.format.valign) el.format.valign = 'top';
+
+      document.getElementById('propText').innerHTML = getActiveText(el);
+
+      let currentStyle = (el.showBorder === false) ? 'none' : (el.borderStyle || 'solid');
+      const borderRadio = document.querySelector(`input[name="propBorderStyle"][value="${currentStyle}"]`);
+      if (borderRadio) borderRadio.checked = true;
+
+      const tRow = document.getElementById('templateEditRow');
+      if (el.templateId && ['bubble', 'double-bubble', 'flow', 'cycle', 'tree', 'brace', 'storyboard'].includes(el.templateType)) {
+          tRow.style.display = 'flex';
+      } else {
+          tRow.style.display = 'none';
+      }
+
+      document.getElementById('textPropRow').style.display = (el.type === 'image' || el.type === 'line') ? 'none' : 'flex';
+
+      const boxP = document.getElementById('boxProps'),
+            tblP = document.getElementById('tableProps'),
+            tblCellUI = document.getElementById('tableCellSettings'),
+            lineP = document.getElementById('lineProps'),
+            imgP = document.getElementById('imgProps'),
+            ellP = document.getElementById('ellipseProps');
+
+      [boxP, tblP, tblCellUI, lineP, imgP, ellP].forEach(p => p.classList.add('hidden'));
+
+      if (el.type === 'box') {
+        boxP.classList.remove('hidden');
+        document.getElementById('propLabel').value = el.label || "";
+        document.getElementById('propLabelAlign').value = el.labelAlign || "left";
+        document.getElementById('propBgStyle').value = el.bgStyle || "none";
+
+        const lSzRow = document.getElementById('lineSizeRow');
+        const gSzRow = document.getElementById('gridSizeRow');
+        lSzRow.style.display = 'none';
+        gSzRow.style.display = 'none';
+
+        if (el.bgStyle === 'lines') {
+           lSzRow.style.display = 'flex';
+           document.getElementById('propLineSize').value = el.lineSize || getDefaultLineSize();
+        } else if (el.bgStyle === 'grid') {
+           gSzRow.style.display = 'flex';
+           document.getElementById('propGridSize').value = el.gridSize || getDefaultGridSize();
+        }
+
+      } else if (el.type === 'ellipse') {
+        ellP.classList.remove('hidden');
+        document.getElementById('propEllipseFill').value = el.bgStyle === 'none' ? 'none' : 'solid';
+      } else if (el.type === 'table') {
+        tblP.classList.remove('hidden');
+        tblCellUI.classList.remove('hidden');
+        document.getElementById('propRows').value = el.rows || 3;
+        document.getElementById('propCols').value = el.cols || 3;
+        document.getElementById('propCustomCols').checked = el.customCols === true;
+        document.getElementById('activeCellLabel').innerText = `Cell R${state.selectedCell.r + 1}:C${state.selectedCell.c + 1}`;
+      } else if (el.type === 'line') {
+        lineP.classList.remove('hidden');
+        document.getElementById('propLineType').value = el.lineType || 'horizontal';
+        document.getElementById('propArrowType').value = el.arrowType || 'none';
+      } else if (el.type === 'image') {
+        imgP.classList.remove('hidden');
+        document.getElementById('propImgLock').checked = el.aspectLocked !== false;
+        document.getElementById('propImgRotation').value = el.rotation || 0;
+      }
+
+      let fmt = el.format;
+      if (el.type === 'table') {
+         const target = document.getElementById('fmtTarget').value;
+         if (target === 'cell' && state.selectedCell.r < el.rows && state.selectedCell.c < el.cols) {
+            const cFmt = el.cells[state.selectedCell.r][state.selectedCell.c].format;
+            fmt = cFmt ? { ...el.format, ...cFmt } : el.format;
+         }
+      }
+
+      if (fmt) {
+        document.getElementById('fmtSize').value = fmt.size;
+        document.getElementById('fmtL').classList.toggle('active', fmt.align === 'left');
+        document.getElementById('fmtC').classList.toggle('active', fmt.align === 'center');
+        document.getElementById('fmtR').classList.toggle('active', fmt.align === 'right');
+        document.getElementById('fmtVT').classList.toggle('active', fmt.valign === 'top');
+        document.getElementById('fmtVM').classList.toggle('active', fmt.valign === 'middle');
+        document.getElementById('fmtVB').classList.toggle('active', fmt.valign === 'bottom');
+      }
+    }
+
+    // Line/grid spacing inputs: keep within a safe range and remember as the default
+    function setPatternSize(kind, input) {
+      const size = Math.round(clampNum(input.value, 5, 200, kind === 'line' ? getDefaultLineSize() : getDefaultGridSize()));
+      input.value = size;
+      localStorage.setItem(kind === 'line' ? 'humbleNoteLineSize' : 'humbleNoteGridSize', size);
+      updateSelectedElement();
+      pushHistory();
+    }
+
+    function updateSelectedElement() {
+      if (!state.selectedId) return;
+      const el = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
+      if (!el) return;
+      
+      setActiveText(el, document.getElementById('propText').innerHTML);
+
+      const selectedBorder = document.querySelector('input[name="propBorderStyle"]:checked').value;
+      if (selectedBorder === 'none') {
+          el.showBorder = false;
+      } else {
+          el.showBorder = true;
+          el.borderStyle = selectedBorder;
+      }
+      
+      if (el.type === 'box') {
+        el.label = document.getElementById('propLabel').value;
+        el.labelAlign = document.getElementById('propLabelAlign').value;
+        el.bgStyle = document.getElementById('propBgStyle').value;
+
+        const lSzRow = document.getElementById('lineSizeRow');
+        const gSzRow = document.getElementById('gridSizeRow');
+        lSzRow.style.display = 'none';
+        gSzRow.style.display = 'none';
+
+        if (el.bgStyle === 'lines') {
+           lSzRow.style.display = 'flex';
+           el.lineSize = Math.round(clampNum(document.getElementById('propLineSize').value, 5, 200, getDefaultLineSize()));
+        } else if (el.bgStyle === 'grid') {
+           gSzRow.style.display = 'flex';
+           el.gridSize = Math.round(clampNum(document.getElementById('propGridSize').value, 5, 200, getDefaultGridSize()));
+        }
+
+      } else if (el.type === 'table') {
+        const newRows = Math.max(1, parseInt(document.getElementById('propRows').value) || 1);
+        const newCols = Math.max(1, parseInt(document.getElementById('propCols').value) || 1);
+        const useCustomCols = document.getElementById('propCustomCols').checked;
+        
+        if (useCustomCols !== el.customCols) {
+            el.customCols = useCustomCols;
+            if (useCustomCols && (!el.colRatios || el.colRatios.length !== el.cols)) {
+                el.colRatios = Array(el.cols).fill(1 / el.cols);
+            }
+        }
+
+        if (newRows !== el.rows || newCols !== el.cols) {
+           el.rows = newRows; el.cols = newCols;
+           el.cells = buildCells(el.cells, el.rows, el.cols);
+           if (el.customCols) {
+               el.colRatios = Array(newCols).fill(1 / newCols);
+           }
+           state.selectedCell.r = Math.min(state.selectedCell.r, el.rows - 1);
+           state.selectedCell.c = Math.min(state.selectedCell.c, el.cols - 1);
+           document.getElementById('activeCellLabel').innerText = `Cell R${state.selectedCell.r + 1}:C${state.selectedCell.c + 1}`;
+        }
+      } else if (el.type === 'ellipse') {
+        el.bgStyle = document.getElementById('propEllipseFill').value;
+      } else if (el.type === 'line') {
+        el.lineType = document.getElementById('propLineType').value;
+        el.arrowType = document.getElementById('propArrowType').value;
+      } else if (el.type === 'image') {
+        el.aspectLocked = document.getElementById('propImgLock').checked;
+        el.rotation = parseInt(document.getElementById('propImgRotation').value) || 0;
+      }
+      drawCanvas();
+    }
+
+    function updateFormat(type, val) {
+      if (!state.selectedId) return;
+      const el = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
+      if (!el) return;
+
+      let v = val;
+      if (type === 'size') {
+        v = Math.round(clampNum(val, 6, 96, NaN));
+        if (isNaN(v)) { refreshPropPanel(); return; } // blank or invalid: put the old size back
+      }
+
+      if (el.type === 'table') {
+        const target = document.getElementById('fmtTarget').value;
+        if (target === 'table') {
+           el.format[type] = v;
+        } else {
+           const cell = el.cells[state.selectedCell.r][state.selectedCell.c];
+           if (!cell.format) cell.format = { ...el.format };
+           cell.format[type] = v;
+        }
+      } else {
+        if (el.format) el.format[type] = v;
+      }
+      refreshPropPanel(); drawCanvas(); pushHistory();
+    }
+
+    function deleteSelected() {
+      if (!state.selectedIds.length) return;
+      const ids = state.selectedIds.slice();
+      state.pages[state.currentPageIndex].elements = state.pages[state.currentPageIndex].elements.filter(e => !ids.includes(e.id));
+      selectElement(null); drawCanvas(); pushHistory();
+    }
+
+    // --- Interactive Engine & Smart Snapping ---
+    function getMousePos(evt) {
+      const r = canvas.getBoundingClientRect();
+      const sheet = getSheetSize();
+      return { 
+        x: (evt.clientX - r.left) * (sheet.w / r.width), 
+        y: (evt.clientY - r.top) * (sheet.h / r.height) 
+      };
+    }
+    
+    // Maps a global mouse coordinate into an element's local un-rotated coordinate space
+    function getLocalPos(pos, el) {
+        if (!el.rotation) return pos;
+        const cx = el.x + el.w / 2;
+        const cy = el.y + el.h / 2;
+        const angle = -el.rotation * Math.PI / 180;
+        return {
+            x: Math.cos(angle) * (pos.x - cx) - Math.sin(angle) * (pos.y - cy) + cx,
+            y: Math.sin(angle) * (pos.x - cx) + Math.cos(angle) * (pos.y - cy) + cy
+        };
+    }
+
+    function calculateSnaps(el) {
+      state.activeGuides = [];
+      if (!document.getElementById('smartGuides').checked) return { x: null, y: null };
+      
+      const snapDist = 10;
+      let snapX = null, snapY = null;
+      let snappedX = false, snappedY = false;
+
+      const eL = el.x, eR = el.x + el.w, eCX = el.x + (el.w/2);
+      const eT = el.y, eB = el.y + el.h, eCY = el.y + (el.h/2);
+
+      for (const other of state.pages[state.currentPageIndex].elements) {
+        if (other.id === el.id || state.selectedIds.includes(other.id)) continue;
+        const oL = other.x, oR = other.x + other.w, oCX = other.x + (other.w/2);
+        const oT = other.y, oB = other.y + other.h, oCY = other.y + (other.h/2);
+
+        if (!snappedX) {
+          const vChecks = [ {t: eL, o: oL}, {t: eL, o: oR}, {t: eL, o: oCX}, {t: eR, o: oL}, {t: eR, o: oR}, {t: eR, o: oCX}, {t: eCX, o: oL}, {t: eCX, o: oR}, {t: eCX, o: oCX} ];
+          for (const c of vChecks) {
+            if (Math.abs(c.t - c.o) < snapDist) {
+              if (c.t === eL) snapX = c.o; else if (c.t === eR) snapX = c.o - el.w; else if (c.t === eCX) snapX = c.o - (el.w/2);
+              state.activeGuides.push({type: 'v', pos: c.o}); snappedX = true; break; 
+            }
+          }
+        }
+
+        if (!snappedY) {
+          const hChecks = [ {t: eT, o: oT}, {t: eT, o: oB}, {t: eT, o: oCY}, {t: eB, o: oT}, {t: eB, o: oB}, {t: eB, o: oCY}, {t: eCY, o: oT}, {t: eCY, o: oB}, {t: eCY, o: oCY} ];
+          for (const c of hChecks) {
+            if (Math.abs(c.t - c.o) < snapDist) {
+              if (c.t === eT) snapY = c.o; else if (c.t === eB) snapY = c.o - el.h; else if (c.t === eCY) snapY = c.o - (el.h/2);
+              state.activeGuides.push({type: 'h', pos: c.o}); snappedY = true; break;
+            }
+          }
+        }
+        if (snappedX && snappedY) break;
+      }
+      return { x: snapX, y: snapY };
+    }
+
+    function calculateResizeSnaps(el, propW, propH) {
+      state.activeGuides = [];
+      if (!document.getElementById('smartGuides').checked) return { w: propW, h: propH };
+
+      const snapDist = 10;
+      let snapW = propW, snapH = propH;
+      let snappedW = false, snappedH = false;
+
+      for (const other of state.pages[state.currentPageIndex].elements) {
+        if (other.id === el.id) continue;
+        const oL = other.x, oR = other.x + other.w, oCX = other.x + (other.w/2);
+        const oT = other.y, oB = other.y + other.h, oCY = other.y + (other.h/2);
+
+        if (!snappedW) {
+           const rightEdge = el.x + propW, centerX = el.x + propW / 2;
+           const vTargets = [oL, oR, oCX];
+           for (const t of vTargets) {
+             if (Math.abs(rightEdge - t) < snapDist) { snapW = t - el.x; state.activeGuides.push({type: 'v', pos: t}); snappedW = true; break; }
+             if (Math.abs(centerX - t) < snapDist) { snapW = (t - el.x) * 2; state.activeGuides.push({type: 'v', pos: t}); snappedW = true; break; }
+           }
+        }
+
+        if (!snappedH) {
+           const bottomEdge = el.y + propH, centerY = el.y + propH / 2;
+           const hTargets = [oT, oB, oCY];
+           for (const t of hTargets) {
+             if (Math.abs(bottomEdge - t) < snapDist) { snapH = t - el.y; state.activeGuides.push({type: 'h', pos: t}); snappedH = true; break; }
+             if (Math.abs(centerY - t) < snapDist) { snapH = (t - el.y) * 2; state.activeGuides.push({type: 'h', pos: t}); snappedH = true; break; }
+           }
+        }
+        if (snappedW && snappedH) break;
+      }
+      return { w: Math.max(20, snapW), h: Math.max(20, snapH) };
+    }
+
+    // Finds a custom-width table column divider under the pointer
+    function findColSeparator(pos) {
+      const els = state.pages[state.currentPageIndex].elements;
+      for (let i = els.length - 1; i >= 0; i--) {
+         const el = els[i];
+         if (el.type !== 'table' || !el.customCols) continue;
+         const lPos = getLocalPos(pos, el);
+         if (lPos.y >= el.y && lPos.y <= el.y + el.h && lPos.x >= el.x && lPos.x <= el.x + el.w) {
+            let currentOffset = 0;
+            for (let c=1; c<el.cols; c++) {
+               currentOffset += el.colRatios[c-1];
+               const lx = el.x + (currentOffset * el.w);
+               if (Math.abs(lPos.x - lx) < 6) return { id: el.id, col: c };
+            }
+         }
+      }
+      return null;
+    }
+
+    // Topmost element under the pointer (and the table cell, for tables)
+    function hitTest(pos) {
+      const els = state.pages[state.currentPageIndex].elements;
+      for (let i = els.length - 1; i >= 0; i--) {
+        const el = els[i];
+        const lPos = getLocalPos(pos, el);
+        if (lPos.x >= el.x && lPos.x <= el.x + el.w && lPos.y >= el.y && lPos.y <= el.y + el.h) {
+          let cell = null;
+          if (el.type === 'table') {
+            const r = Math.floor((lPos.y - el.y) / (el.h / el.rows));
+            let c = el.cols - 1;
+            if (el.customCols) {
+                let accumulatedRatio = 0;
+                const relX = (lPos.x - el.x) / el.w;
+                for (let k = 0; k < el.cols; k++) {
+                    accumulatedRatio += el.colRatios[k];
+                    if (relX <= accumulatedRatio) { c = k; break; }
+                }
+            } else {
+                c = Math.floor((lPos.x - el.x) / (el.w / el.cols));
+            }
+            cell = { r: Math.max(0, Math.min(r, el.rows-1)), c: Math.max(0, Math.min(c, el.cols-1)) };
+          }
+          return { el, cell };
+        }
+      }
+      return null;
+    }
+
+    function isOnResizeHandle(pos, el, pointerType) {
+      const reach = pointerType === 'mouse' ? HANDLE_SIZE * 1.5 : HANDLE_SIZE * 2.5; // bigger target for fingers
+      const lPos = getLocalPos(pos, el);
+      const cornerX = el.x + el.w, cornerY = el.y + el.h;
+      return Math.abs(lPos.x - cornerX) <= reach && Math.abs(lPos.y - cornerY) <= reach;
+    }
+
+    let dragStart = null; // { x, y, origins: { id: {x, y} } }
+    let panStart = null;  // finger/pen panning of the page when touching empty space
+
+    // Pointer events cover mouse, touch screens and styluses. Pointer capture keeps a drag
+    // going even if the pointer leaves the canvas.
+    canvas.addEventListener('pointerdown', function(evt) {
+      if (evt.pointerType === 'mouse' && evt.button !== 0) return;
+      const pos = getMousePos(evt);
+      isDragging = false; isResizing = false; dragStart = null; panStart = null;
+
+      const colSep = findColSeparator(pos);
+      if (colSep) {
+          isResizingCol = colSep;
+          canvas.setPointerCapture(evt.pointerId);
+          return;
+      }
+
+      if (state.selectedId && !evt.shiftKey) {
+        const selEl = state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId);
+        if (selEl && isOnResizeHandle(pos, selEl, evt.pointerType)) {
+          isResizing = true;
+          canvas.setPointerCapture(evt.pointerId);
+          return;
+        }
+      }
+
+      const hit = hitTest(pos);
+
+      if (!hit) {
+        if (!evt.shiftKey) selectElement(null);
+        if (evt.pointerType !== 'mouse') {
+          panStart = { x: evt.clientX, y: evt.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
+          canvas.setPointerCapture(evt.pointerId);
+        }
+        drawCanvas();
+        return;
+      }
+
+      const el = hit.el;
+      if (hit.cell) state.selectedCell = hit.cell;
+
+      if (evt.shiftKey) {
+        if (state.selectedIds.includes(el.id)) {
+          // Shift+click on a selected element removes it from the selection
+          const remaining = state.selectedIds.filter(id => id !== el.id);
+          const primary = (el.id === state.selectedId) ? (remaining[remaining.length - 1] || null) : state.selectedId;
+          selectElement(primary, remaining);
+          drawCanvas();
+          return;
+        }
+        selectElement(el.id, state.selectedIds.concat(el.id));
+      } else if (!state.selectedIds.includes(el.id)) {
+        selectElement(el.id);
+      } else {
+        // Clicking an element that's already selected keeps the group (so it can be dragged);
+        // a plain click without dragging narrows the selection to just this element.
+        selectElement(el.id, state.selectedIds);
+      }
+
+      isDragging = true;
+      dragStart = { x: pos.x, y: pos.y, origins: {}, moved: false, collapseTo: (!evt.shiftKey && state.selectedIds.length > 1) ? el.id : null };
+      getSelectedEls().forEach(e => { dragStart.origins[e.id] = { x: e.x, y: e.y }; });
+      canvas.setPointerCapture(evt.pointerId);
+      drawCanvas();
+    });
+
+    canvas.addEventListener('pointermove', function(evt) {
+      const pos = getMousePos(evt);
+
+      if (panStart) {
+          viewport.scrollLeft = panStart.left - (evt.clientX - panStart.x);
+          viewport.scrollTop = panStart.top - (evt.clientY - panStart.y);
+          return;
+      }
+
+      if (isResizingCol) {
+          const el = state.pages[state.currentPageIndex].elements.find(e => e.id === isResizingCol.id);
+          if (!el) return;
+          const c = isResizingCol.col;
+
+          const lPos = getLocalPos(pos, el);
+
+          let prevRatios = 0;
+          for(let i=0; i<c-1; i++) prevRatios += el.colRatios[i];
+
+          const minRatio = 20 / el.w;
+          const maxRatio = (el.colRatios[c-1] + el.colRatios[c]) - minRatio;
+
+          let rawNewRatio = ((lPos.x - el.x) / el.w) - prevRatios;
+          let newRatio = Math.max(minRatio, Math.min(maxRatio, rawNewRatio));
+
+          const diff = newRatio - el.colRatios[c-1];
+          el.colRatios[c-1] += diff;
+          el.colRatios[c] -= diff;
+
+          drawCanvas();
+          return;
+      }
+
+      const el = state.selectedId ? state.pages[state.currentPageIndex].elements.find(e => e.id === state.selectedId) : null;
+      const useGrid = document.getElementById('snapGrid').checked;
+      const gSize = state.snapSize;
+
+      if (isResizing && el) {
+        const lPos = getLocalPos(pos, el);
+        let propW = Math.max(20, lPos.x - el.x);
+        let propH = Math.max(20, lPos.y - el.y);
+
+        if (useGrid) {
+          propW = Math.max(gSize, Math.round(propW / gSize) * gSize);
+          propH = Math.max(gSize, Math.round(propH / gSize) * gSize);
+          state.activeGuides = [];
+        } else {
+          const resizeSnaps = calculateResizeSnaps(el, propW, propH);
+          propW = resizeSnaps.w;
+          propH = resizeSnaps.h;
+        }
+
+        if (el.type === 'image' && el.aspectLocked) {
+            let ratio = el.originalRatio || (el.w / el.h);
+            propH = propW / ratio;
+        }
+
+        el.w = propW;
+        el.h = propH;
+        drawCanvas();
+      } else if (isDragging && el && dragStart && dragStart.origins[el.id]) {
+        const origin = dragStart.origins[el.id];
+        if (Math.abs(pos.x - dragStart.x) + Math.abs(pos.y - dragStart.y) > 2) dragStart.moved = true;
+        el.x = origin.x + (pos.x - dragStart.x);
+        el.y = origin.y + (pos.y - dragStart.y);
+
+        if (useGrid) {
+          el.x = Math.round(el.x / gSize) * gSize;
+          el.y = Math.round(el.y / gSize) * gSize;
+          state.activeGuides = [];
+        } else {
+          const snaps = calculateSnaps(el);
+          if (snaps.x !== null) el.x = snaps.x;
+          if (snaps.y !== null) el.y = snaps.y;
+        }
+
+        // Move the rest of the selection by the same amount
+        const dx = el.x - origin.x, dy = el.y - origin.y;
+        getSelectedEls().forEach(other => {
+          if (other.id === el.id || !dragStart.origins[other.id]) return;
+          other.x = dragStart.origins[other.id].x + dx;
+          other.y = dragStart.origins[other.id].y + dy;
+        });
+        drawCanvas();
+      } else if (!isDragging && !isResizing) {
+        // Hover cursor feedback
+        let cursor = 'crosshair';
+        if (findColSeparator(pos)) cursor = 'col-resize';
+        else if (el && isOnResizeHandle(pos, el, evt.pointerType)) cursor = 'nwse-resize';
+        else if (hitTest(pos)) cursor = 'move';
+        canvas.style.cursor = cursor;
+      }
+    });
+
+    function endPointerAction() {
+      if (dragStart && dragStart.collapseTo && !dragStart.moved) selectElement(dragStart.collapseTo);
+      if (isDragging || isResizing || isResizingCol) pushHistory();
+      isDragging = false; isResizing = false; isResizingCol = null; dragStart = null; panStart = null;
+      state.activeGuides = []; drawCanvas();
+    }
+    canvas.addEventListener('pointerup', endPointerAction);
+    canvas.addEventListener('pointercancel', endPointerAction);
+
+    // --- AST Rich Text Engine ---
+    function parseHTMLToSegments(html) {
+      if (!html) return [];
+      const tpl = document.createElement('template'); // inert: markup inside never runs or loads
+      
+      let cleanHtml = html.replace(/<div[^>]*><br><\/div>/gi, '\n');
+      cleanHtml = cleanHtml.replace(/<div[^>]*>/gi, '\n');
+      cleanHtml = cleanHtml.replace(/<\/div>/gi, '');
+      cleanHtml = cleanHtml.replace(/<p[^>]*>/gi, '\n');
+      cleanHtml = cleanHtml.replace(/<\/p>/gi, '');
+      cleanHtml = cleanHtml.replace(/<br[^>]*>/gi, '\n');
+      cleanHtml = cleanHtml.replace(/&nbsp;/gi, ' ');
+      
+      cleanHtml = cleanHtml.replace(/^\n+/, '').replace(/\n+$/, '');
+
+      tpl.innerHTML = cleanHtml;
+
+      const segments = [];
+      function traverse(node, currentFormat) {
+          if (node.nodeType === 3) { 
+              if (node.nodeValue) {
+                  segments.push({ text: node.nodeValue, format: {...currentFormat} });
+              }
+          } else if (node.nodeType === 1 || node.nodeType === 11) { 
+              const fmt = {...currentFormat};
+              const tag = node.tagName ? node.tagName.toLowerCase() : '';
+              if (tag === 'b' || tag === 'strong') fmt.bold = true;
+              if (tag === 'i' || tag === 'em') fmt.italic = true;
+              if (tag === 'u') fmt.underline = true;
+              if (tag === 's' || tag === 'strike') fmt.strike = true;
+              if (tag === 'sup') fmt.sup = true;
+              if (tag === 'sub') fmt.sub = true;
+              
+              for (let child of node.childNodes) {
+                  traverse(child, fmt);
+              }
+          }
+      }
+      traverse(tpl.content, { bold: false, italic: false, underline: false, strike: false, sup: false, sub: false });
+      return segments;
+    }
+
+    function buildRichLines(ctx, segments, maxWidth, baseSize, gFont) {
+      const lines = [];
+      let currentLine = { width: 0, segments: [], indent: 0 };
+      let isFirstLineOfBlock = true;
+
+      const applyFont = (fmt) => {
+          let fs = "";
+          if (fmt.italic) fs += "italic ";
+          if (fmt.bold) fs += "bold ";
+          let size = baseSize;
+          if (fmt.sup || fmt.sub) size = Math.round(size * 0.75);
+          fs += `${size}px ${gFont}`;
+          ctx.font = fs;
+      };
+
+      for (let i = 0; i < segments.length; i++) {
+          const seg = segments[i];
+          const parts = seg.text.split('\n');
+
+          for(let p = 0; p < parts.length; p++) {
+              if (p > 0) {
+                  lines.push(currentLine);
+                  currentLine = { width: 0, segments: [], indent: 0 };
+                  isFirstLineOfBlock = true;
+              }
+
+              const textPart = parts[p];
+              if (!textPart) continue;
+
+              if (isFirstLineOfBlock && currentLine.segments.length === 0) {
+                  const match = textPart.match(/^([•☐]\s+|[IVXLCDMivxlcdm]+\.\s+|[A-Za-z]\.\s+|[0-9]+\.\s+)/);
+                  if (match) {
+                      applyFont(seg.format);
+                      currentLine.indent = ctx.measureText(match[1]).width;
+                  }
+                  isFirstLineOfBlock = false;
+              }
+
+              const words = textPart.split(/( )/);
+
+              for (let w = 0; w < words.length; w++) {
+                  const word = words[w];
+                  if (!word) continue;
+
+                  applyFont(seg.format);
+                  const wWidth = ctx.measureText(word).width;
+                  const maxW = maxWidth - currentLine.indent;
+
+                  // A single word wider than the box gets split across lines
+                  if (word !== ' ' && wWidth > maxW && word.length > 1) {
+                      let cut = 1;
+                      while (cut < word.length - 1 && ctx.measureText(word.slice(0, cut + 1)).width <= maxW) cut++;
+                      words.splice(w, 1, word.slice(0, cut), word.slice(cut));
+                      w--;
+                      continue;
+                  }
+
+                  if (currentLine.width + wWidth > maxW && currentLine.width > 0 && word !== ' ') {
+                      lines.push(currentLine);
+                      currentLine = { width: 0, segments: [], indent: currentLine.indent };
+                  }
+
+                  const lastSeg = currentLine.segments[currentLine.segments.length - 1];
+                  if (lastSeg && JSON.stringify(lastSeg.format) === JSON.stringify(seg.format)) {
+                      lastSeg.text += word;
+                      currentLine.width += wWidth;
+                  } else {
+                      currentLine.segments.push({ text: word, format: seg.format });
+                      currentLine.width += wWidth;
+                  }
+              }
+          }
+      }
+      if (currentLine.segments.length > 0 || currentLine.width === 0) {
+          lines.push(currentLine);
+      }
+      return lines;
+    }
+
+    // Returns true when the text is taller than the space available
+    function drawRichTextEngine(ctx, html, startX, startY, w, availH, elFormat, gFont) {
+        if (!html) return false;
+        const segments = parseHTMLToSegments(html);
+        const baseSize = clampNum(elFormat.size, 6, 96, 12);
+        const lineHeight = baseSize * 1.3;
+
+        const lines = buildRichLines(ctx, segments, w, baseSize, gFont);
+        const totalH = lines.length * lineHeight;
+
+        let yOffset = 0;
+        if (elFormat.valign === 'middle') yOffset = Math.max(0, (availH - totalH) / 2);
+        else if (elFormat.valign === 'bottom') yOffset = Math.max(0, availH - totalH);
+
+        ctx.textBaseline = 'alphabetic';
+        let curY = startY + yOffset + baseSize;
+
+        lines.forEach(line => {
+            let curX = startX + line.indent;
+
+            if (elFormat.align === 'center') {
+                curX = startX + (w / 2) - (line.width / 2);
+            } else if (elFormat.align === 'right') {
+                curX = startX + w - line.width;
+            }
+
+            line.segments.forEach(seg => {
+                let fs = "";
+                if (seg.format.italic || elFormat.italic) fs += "italic ";
+                if (seg.format.bold || elFormat.bold) fs += "bold ";
+                
+                let size = baseSize;
+                let yShift = 0;
+                
+                if (seg.format.sup) { size = Math.round(baseSize * 0.75); yShift = -baseSize * 0.35; }
+                if (seg.format.sub) { size = Math.round(baseSize * 0.75); yShift = baseSize * 0.25; }
+                
+                fs += `${size}px ${gFont}`;
+                ctx.font = fs;
+
+                ctx.fillText(seg.text, curX, curY + yShift);
+                const tw = ctx.measureText(seg.text).width;
+
+                if (seg.format.underline || elFormat.underline || seg.format.strike || elFormat.strike) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = ctx.fillStyle;
+                    const ly = (seg.format.strike || elFormat.strike) ? (curY + yShift - size*0.25) : (curY + yShift + size*0.15);
+                    ctx.moveTo(curX, ly);
+                    ctx.lineTo(curX + tw, ly);
+                    ctx.lineWidth = Math.max(1, size * 0.08);
+                    ctx.stroke();
+                }
+
+                curX += tw;
+            });
+            curY += lineHeight;
+        });
+        
+        ctx.textBaseline = 'top';
+        const hasVisibleText = segments.some(sg => sg.text.trim() !== '');
+        return hasVisibleText && totalH > availH + 1;
+    }
+
+    // Red on-screen warning (never exported) when text doesn't fit inside its element
+    function drawOverflowWarning(ctx, x, y, w, h) {
+      if (state.isExporting) return;
+      ctx.save();
+      ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x + w, y + h); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = 'bold 10px Arial, sans-serif'; ctx.textBaseline = 'bottom';
+      const msg = 'Text doesn’t fit';
+      const mw = ctx.measureText(msg).width + 8;
+      ctx.fillStyle = '#dc2626'; ctx.fillRect(x + w - mw, y + h - 14, mw, 14);
+      ctx.fillStyle = '#ffffff'; ctx.fillText(msg, x + w - mw + 4, y + h - 2);
+      ctx.restore();
+    }
+
+    // Draws the current page. Pass a context to draw somewhere else (used for high-resolution PDF export).
+    function drawCanvas(targetCtx) {
+      const ctx = targetCtx || mainCtx;
+      updatePageUI();
+
+      const gFont = document.getElementById('globalFont').value;
+      const showMargins = document.getElementById('showMargins').checked;
+      const showGrid = document.getElementById('snapGrid').checked;
+      const gSize = state.snapSize;
+
+      const sheet = getSheetSize();
+      const logicalW = sheet.w, logicalH = sheet.h;
+
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, logicalW, logicalH);
+      const tW = state.paper.widthInches * DPI, tH = state.paper.heightInches * DPI;
+
+      if (state.isExporting && (tW < logicalW || tH < logicalH)) {
+        ctx.strokeStyle = '#1e2a3a';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const tick = 24;
+        if (tW < logicalW) {
+           ctx.moveTo(tW, 0); ctx.lineTo(tW, tick);
+           ctx.moveTo(tW, logicalH); ctx.lineTo(tW, logicalH - tick);
+        }
+        if (tH < logicalH) {
+           ctx.moveTo(0, tH); ctx.lineTo(tick, tH);
+           ctx.moveTo(logicalW, tH); ctx.lineTo(logicalW - tick, tH);
+        }
+        ctx.stroke();
+      }
+
+      if (!state.isExporting) {
+        if (showGrid) {
+          ctx.fillStyle = '#cbd5e1';
+          for (let x=0; x<tW; x+=gSize) { for (let y=0; y<tH; y+=gSize) { ctx.fillRect(x, y, 2, 2); } }
+        }
+        if (showMargins) {
+          if (tW < logicalW || tH < logicalH) {
+            ctx.strokeStyle = '#cbd5e1'; ctx.setLineDash([5, 5]); ctx.lineWidth = 1; ctx.strokeRect(0, 0, tW, tH); ctx.setLineDash([]);
+          }
+          ctx.strokeStyle = 'rgba(213, 94, 0, 0.4)'; ctx.lineWidth = 1; ctx.strokeRect(0.25*DPI, 0.25*DPI, tW - 0.5*DPI, tH - 0.5*DPI);
+        }
+      }
+
+      state.pages[state.currentPageIndex].elements.forEach(el => {
+        if (el.rotation) {
+            const cx = el.x + el.w / 2;
+            const cy = el.y + el.h / 2;
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(el.rotation * Math.PI / 180);
+            ctx.translate(-cx, -cy);
+        }
+
+        ctx.textBaseline = 'top';
+        const isBorder = el.showBorder !== false;
+
+        const applyStyle = () => {
+          if (el.borderStyle === 'dashed') ctx.setLineDash([6, 4]);
+          else if (el.borderStyle === 'dotted') ctx.setLineDash([2, 4]);
+          else ctx.setLineDash([]);
+        };
+
+        if (!state.isExporting && !getActiveText(el) && !el.label && !isBorder && el.type !== 'image' && el.type !== 'table' && el.type !== 'line') {
+          ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.strokeRect(el.x, el.y, el.w, el.h); ctx.setLineDash([]);
+          ctx.fillStyle = '#94a3b8'; ctx.font = `italic 12px ${gFont}`; ctx.fillText("Empty", el.x + 5, el.y + 5);
+        }
+
+        if (el.type === 'box') {
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x, el.y, el.w, el.h);
+
+          if (el.bgStyle === 'lines' || el.bgStyle === 'grid') {
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+
+            const rawStep = (el.bgStyle === 'lines') ? (el.lineSize || getDefaultLineSize()) : (el.gridSize || getDefaultGridSize());
+            const step = clampNum(rawStep, 5, 200, 20); // never loop forever on a bad value
+
+            for (let ly = el.y + step; ly < el.y + el.h; ly += step) { ctx.moveTo(el.x, ly); ctx.lineTo(el.x + el.w, ly); }
+            if (el.bgStyle === 'grid') { for (let lx = el.x + step; lx < el.x + el.w; lx += step) { ctx.moveTo(lx, el.y); ctx.lineTo(lx, el.y + el.h); } }
+            ctx.stroke();
+          }
+          if (isBorder) {
+            ctx.strokeStyle = '#1e2a3a';
+            ctx.lineWidth = el.borderWidth || 2;
+            applyStyle();
+            ctx.strokeRect(el.x, el.y, el.w, el.h);
+            ctx.setLineDash([]);
+          }
+
+          if (el.label) {
+            ctx.font = `bold 14px ${gFont}`; const pad = 8; const textW = ctx.measureText(el.label).width;
+            const labelW = textW + (pad * 2), labelH = 22;
+            let labelX = el.x + 5;
+
+            if (el.labelAlign === 'center') labelX = el.x + (el.w / 2) - (labelW / 2);
+            else if (el.labelAlign === 'right') labelX = el.x + el.w - labelW - 5;
+
+            const labelY = el.y - (labelH / 2);
+            ctx.fillStyle = '#1e2a3a'; ctx.fillRect(labelX, labelY, labelW, labelH);
+
+            ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'middle'; ctx.fillText(el.label, labelX + pad, el.y); ctx.textBaseline = 'top';
+          }
+
+          if (el.text) {
+             ctx.fillStyle = '#1e2a3a';
+             let textY = el.y + 8; if (el.label) textY += 12;
+             const availH = el.h - (textY - el.y) - 8;
+             const overflow = drawRichTextEngine(ctx, el.text, el.x + 10, textY, el.w - 20, availH, el.format, gFont);
+             if (overflow) drawOverflowWarning(ctx, el.x, el.y, el.w, el.h);
+          }
+        }
+        else if (el.type === 'ellipse') {
+          ctx.beginPath();
+          ctx.ellipse(el.x + (el.w / 2), el.y + (el.h / 2), el.w / 2, el.h / 2, 0, 0, 2 * Math.PI);
+
+          if (el.bgStyle !== 'none') {
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+          }
+
+          if (isBorder) {
+            ctx.strokeStyle = '#1e2a3a';
+            ctx.lineWidth = el.borderWidth || 2;
+            applyStyle();
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          if (el.text) {
+             ctx.fillStyle = '#1e2a3a';
+             const inscribedW = el.w * 0.707;
+             const inscribedH = el.h * 0.707;
+             const padX = (el.w - inscribedW) / 2;
+             const padY = (el.h - inscribedH) / 2;
+
+             const overflow = drawRichTextEngine(ctx, el.text, el.x + padX, el.y + padY, inscribedW, inscribedH, el.format, gFont);
+             if (overflow) drawOverflowWarning(ctx, el.x + padX, el.y + padY, inscribedW, inscribedH);
+          }
+        }
+        else if (el.type === 'line') {
+          ctx.strokeStyle = '#1e2a3a';
+          ctx.lineWidth = el.borderWidth || 2;
+          applyStyle();
+          ctx.beginPath();
+
+          let x1, y1, x2, y2;
+          if (el.lineType === 'vertical') {
+            x1 = el.x + el.w/2; y1 = el.y; x2 = el.x + el.w/2; y2 = el.y + el.h;
+          } else if (el.lineType === 'diag-down') {
+            x1 = el.x; y1 = el.y; x2 = el.x + el.w; y2 = el.y + el.h;
+          } else if (el.lineType === 'diag-up') {
+            x1 = el.x; y1 = el.y + el.h; x2 = el.x + el.w; y2 = el.y;
+          } else {
+            x1 = el.x; y1 = el.y + el.h/2; x2 = el.x + el.w; y2 = el.y + el.h/2;
+          }
+
+          if (el.flipLine) {
+            const tX = x1, tY = y1;
+            x1 = x2; y1 = y2;
+            x2 = tX; y2 = tY;
+          }
+
+          ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Arrowhead rendering function
+          const drawArrow = (fromX, fromY, toX, toY) => {
+            const angle = Math.atan2(toY - fromY, toX - fromX);
+            const headlen = 12;
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.stroke();
+          };
+
+          if (el.arrowType === 'end' || el.arrowType === 'both') drawArrow(x1, y1, x2, y2);
+          if (el.arrowType === 'both') drawArrow(x2, y2, x1, y1);
+        }
+        else if (el.type === 'table') {
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x, el.y, el.w, el.h);
+          ctx.strokeStyle = '#1e2a3a'; ctx.lineWidth = el.borderWidth || 2;
+          applyStyle();
+          ctx.beginPath();
+
+          const rH = el.h / el.rows;
+          // Draw horizontal lines
+          for(let i=1; i<el.rows; i++) { ctx.moveTo(el.x, el.y + i*rH); ctx.lineTo(el.x + el.w, el.y + i*rH); }
+
+          // Draw vertical lines dynamically based on ratio settings
+          let currentWOffset = 0;
+          for(let i=1; i<el.cols; i++) {
+             currentWOffset += el.customCols && el.colRatios ? el.colRatios[i-1] : (1 / el.cols);
+             const lx = el.x + (currentWOffset * el.w);
+             ctx.moveTo(lx, el.y); ctx.lineTo(lx, el.y + el.h);
+          }
+
+          ctx.stroke();
+          if (isBorder) ctx.strokeRect(el.x, el.y, el.w, el.h);
+          ctx.setLineDash([]);
+
+          for (let r=0; r<el.rows; r++) {
+             let currentCOffset = 0;
+             for (let c=0; c<el.cols; c++) {
+                 const cell = el.cells[r][c];
+                 const ratio = el.customCols && el.colRatios ? el.colRatios[c] : (1 / el.cols);
+                 const cW = ratio * el.w;
+                 const cX = el.x + (currentCOffset * el.w);
+                 const cY = el.y + (r * rH);
+
+                 if (el.id === state.selectedId && state.selectedCell && state.selectedCell.r === r && state.selectedCell.c === c && !state.isExporting) {
+                    ctx.fillStyle = 'rgba(50, 102, 173, 0.15)';
+                    ctx.fillRect(cX, cY, cW, rH);
+                 }
+
+                 if (cell && cell.text) {
+                    ctx.fillStyle = '#1e2a3a';
+                    const mergedFormat = cell.format ? { ...el.format, ...cell.format } : el.format;
+                    const overflow = drawRichTextEngine(ctx, cell.text, cX + 5, cY + 5, cW - 10, rH - 10, mergedFormat, gFont);
+                    if (overflow) drawOverflowWarning(ctx, cX, cY, cW, rH);
+                 }
+
+                 currentCOffset += ratio;
+             }
+          }
+        }
+        else if (el.type === 'text') {
+          if (isBorder) {
+            ctx.strokeStyle = '#1e2a3a';
+            ctx.lineWidth = el.borderWidth || 2;
+            applyStyle();
+            ctx.strokeRect(el.x, el.y, el.w, el.h);
+            ctx.setLineDash([]);
+          }
+          if (el.text) {
+            ctx.fillStyle = '#1e2a3a';
+            const overflow = drawRichTextEngine(ctx, el.text, el.x, el.y, el.w, el.h, el.format, gFont);
+            if (overflow) drawOverflowWarning(ctx, el.x, el.y, el.w, el.h);
+          }
+        }
+        else if (el.type === 'image') {
+          const img = getImage(el.imageId);
+          // Only draw once loaded; a missing or broken image must not stop the rest of the page from drawing
+          if (img && img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, el.x, el.y, el.w, el.h);
+          } else if (!state.isExporting) {
+            ctx.fillStyle = '#f1f5f9'; ctx.fillRect(el.x, el.y, el.w, el.h);
+            ctx.fillStyle = '#94a3b8'; ctx.font = `italic 12px ${gFont}`; ctx.fillText(img ? "Loading image…" : "Image missing", el.x + 5, el.y + 5);
+          }
+          if (isBorder) {
+            ctx.strokeStyle = '#1e2a3a';
+            ctx.lineWidth = el.borderWidth || 2;
+            applyStyle();
+            ctx.strokeRect(el.x, el.y, el.w, el.h);
+            ctx.setLineDash([]);
+          }
+        }
+
+        // Selection Guide & Handles
+        if (state.selectedIds.includes(el.id) && !state.isExporting) {
+          const isPrimary = el.id === state.selectedId;
+          ctx.strokeStyle = 'rgba(50, 102, 173, 0.8)'; ctx.lineWidth = 2;
+          ctx.setLineDash(isPrimary && state.selectedIds.length > 1 ? [] : [4, 4]);
+          ctx.strokeRect(el.x, el.y, el.w, el.h);
+          ctx.setLineDash([]);
+          if (isPrimary) {
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(el.x + el.w - HANDLE_SIZE/2, el.y + el.h - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE); ctx.strokeRect(el.x + el.w - HANDLE_SIZE/2, el.y + el.h - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
+          }
+        }
+
+        if (el.rotation) {
+            ctx.restore();
+        }
+      });
+
+      if (!state.isExporting && state.activeGuides.length > 0) {
+        ctx.strokeStyle = '#d946ef';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        state.activeGuides.forEach(g => {
+          if (g.type === 'v') { ctx.moveTo(g.pos, 0); ctx.lineTo(g.pos, logicalH); }
+          else { ctx.moveTo(0, g.pos); ctx.lineTo(logicalW, g.pos); }
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function getTimestamp() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+
+    // --- PDF Export Logic ---
+    let isExportingPDF = false;
+    async function downloadPDF() {
+      if (!window.jspdf) { alert("PDF library is loading, please try again in a moment."); return; }
+      if (isExportingPDF) return;
+      isExportingPDF = true;
+      if (document.activeElement && document.activeElement.id === 'propText') pushHistory();
+
+      const { jsPDF } = window.jspdf;
+      const sheet = getSheetSize();
+      const pdfW = sheet.w / DPI, pdfH = sheet.h / DPI; // inches
+      const orientation = pdfW > pdfH ? 'l' : 'p';
+
+      // Render each page at 300 DPI on an offscreen canvas (capped so very large custom
+      // sizes stay under browser canvas limits)
+      const maxPixels = 16000000;
+      const scale = Math.min(EXPORT_DPI / DPI, Math.sqrt(maxPixels / (sheet.w * sheet.h)));
+      const off = document.createElement('canvas');
+      off.width = Math.round(sheet.w * scale);
+      off.height = Math.round(sheet.h * scale);
+      const offCtx = off.getContext('2d');
+      offCtx.setTransform(scale, 0, 0, scale, 0, 0);
+
+      // Make sure every image is fully loaded before drawing
+      const pending = [];
+      state.pages.forEach(p => p.elements.forEach(el => {
+        if (el.type === 'image') { const img = getImage(el.imageId); if (img && img.decode) pending.push(img.decode().catch(() => {})); }
+      }));
+      await Promise.all(pending);
+
+      const doc = new jsPDF({ orientation: orientation, unit: 'in', format: [pdfW, pdfH], compress: true });
+      const originalPageIndex = state.currentPageIndex;
+      state.isExporting = true;
+
+      try {
+        for (let i = 0; i < state.pages.length; i++) {
+            state.currentPageIndex = i;
+            drawCanvas(offCtx);
+            const imgData = off.toDataURL('image/png');
+            if (i > 0) doc.addPage([pdfW, pdfH], orientation);
+            doc.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH, undefined, 'FAST');
+        }
+      } catch (err) {
+        console.error("Export failed:", err);
+        alert("Sorry, the PDF couldn't be created: " + err.message);
+        return;
+      } finally {
+        // Restore state before handling the save dialog
+        state.currentPageIndex = originalPageIndex;
+        state.isExporting = false;
+        isExportingPDF = false;
+        drawCanvas();
+      }
+
+      const defaultName = `Notes_${getTimestamp()}.pdf`;
+
+      if (window.showSaveFilePicker) {
+        try {
+          const pdfBlob = doc.output('blob');
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: defaultName,
+            types: [{
+              description: 'PDF Document',
+              accept: { 'application/pdf': ['.pdf'] },
+            }],
+          });
+          const writable = await fileHandle.createWritable();
+          await writable.write(pdfBlob);
+          await writable.close();
+        } catch (err) {
+          if (err.name !== 'AbortError') console.error("Export failed:", err);
+        }
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker
+        doc.save(defaultName);
+      }
+    }
+
+    // --- Native App Launch & Double-Click Handler ---
+    function checkLaunchPayload() {
+      if (window.location.hash.startsWith('#file=')) {
+        try {
+          const rawB64 = window.location.hash.slice(6);
+          const bytes = Uint8Array.from(window.atob(decodeURIComponent(rawB64)), c => c.charCodeAt(0));
+          const jsonString = new TextDecoder().decode(bytes);
+          loadExternalDoc(jsonString);
+          lastSavedContent = serializeForFile();
+          history.replaceState(null, '', window.location.pathname);
+          return true;
+        } catch (err) {
+          console.error("Could not load file from launch parameter:", err);
+        }
+      }
+      return false;
+    }
+
+    document.fonts.ready.then(() => drawCanvas());
+    loadSettings();
+    handlePaperSizeChange(false);
+
+    setTimeout(async () => {
+      setZoom(Math.min(1.0, (viewport.clientWidth - 80) / getSheetSize().w));
+      if (checkLaunchPayload()) return;
+
+      // Bring back the work from last time, if there was any
+      const saved = await readAutosave();
+      if (saved) {
+        try {
+          const snap = JSON.parse(saved);
+          if (snap.pages && snap.pages.some(p => p.elements && p.elements.length > 0)) {
+            loadExternalDoc(saved);
+            lastSavedContent = serializeForFile();
+            showToast('Restored your work from last time.');
+            return;
+          }
+        } catch (err) { console.warn('Could not restore autosave:', err); }
+      }
+      pushHistory();
+    }, 100);
+
+    window.addEventListener('hashchange', checkLaunchPayload);
+  </script>
+</body>
+</html>
